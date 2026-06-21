@@ -1,4 +1,5 @@
 'use client'
+export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
@@ -28,7 +29,6 @@ export default function ReceiptSettings() {
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
-
       const { data: stores } = await supabase.from('stores').select('*').eq('user_id', user.id).limit(1)
       if (stores && stores.length > 0) {
         setStore(stores[0])
@@ -63,32 +63,26 @@ export default function ReceiptSettings() {
           {saving ? 'Saving...' : saved ? '✓ Saved!' : 'Save changes'}
         </button>
       </nav>
-
       <div className="max-w-2xl mx-auto px-6 py-8 space-y-6">
         <h1 className="text-2xl font-bold" style={{color:'#1a2f5e'}}>Customize your receipt</h1>
-
         {!store && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
             ⚠️ Connect a Shopify store first before customizing receipts.{' '}
             <Link href="/dashboard/connect" className="font-semibold underline">Connect now →</Link>
           </div>
         )}
-
-        {/* Brand Color */}
         <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-          <h2 className="font-bold mb-4" style={{color:'#1a2f5e'}}>Branding</h2>
+          <h2 className="font-bold mb-4" style={{color:'1a2f5e'}}>Branding</h2>
           <div className="flex items-center gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Brand color</label>
               <div className="flex items-center gap-3">
-                <input type="color" value={settings.brand_color} onChange={e => setSettings({...settings, brand_color: e.target.value})} className="w-12 h-10 rounded cursor-pointer border border-gray-200"/>
+                <input type="color" value={settings.brand_color} onChange={e => setSettings({...settings, brand_color: e.target.value})} className="w4-12 h-10 rounded cursor-pointer border border-gray-200"/>
                 <input type="text" value={settings.brand_color} onChange={e => setSettings({...settings, brand_color: e.target.value})} className="px-3 py-2 border border-gray-200 rounded-lg text-sm w-32 text-gray-900"/>
               </div>
             </div>
           </div>
         </div>
-
-        {/* Messages */}
         <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
           <h2 className="font-bold mb-4" style={{color:'#1a2f5e'}}>Messages</h2>
           <div className="space-y-4">
@@ -106,11 +100,9 @@ export default function ReceiptSettings() {
             </div>
           </div>
         </div>
-
-        {/* Social Links */}
         <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-bold" style={{color:'#1a2f5e'}}>Social links</h2>
+            <h2 className="font-bold" style={{color:#1a2f5e'}}>Social links</h2>
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={settings.show_social_links} onChange={e => setSettings({...settings, show_social_links: e.target.checked})} className="w-4 h-4"/>
               <span className="text-sm text-gray-600">Show in receipt</span>
@@ -119,14 +111,12 @@ export default function ReceiptSettings() {
           <div className="space-y-3">
             {['instagram', 'tiktok', 'facebook'].map(platform => (
               <div key={platform}>
-                <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">{platform} URL</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">{platform} URL/label>
                 <input type="url" value={(settings as any)[`${platform}_url`]} onChange={e => setSettings({...settings, [`${platform}_url`]: e.target.value})} className="w-full px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-900 focus:outline-none" placeholder={`https://${platform}.com/yourstore`}/>
               </div>
             ))}
           </div>
         </div>
-
-        {/* Display Options */}
         <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
           <h2 className="font-bold mb-4" style={{color:'#1a2f5e'}}>Display options</h2>
           <div className="space-y-3">
@@ -135,14 +125,13 @@ export default function ReceiptSettings() {
               { key: 'show_tax_breakdown', label: 'Show tax breakdown' },
             ].map(item => (
               <label key={item.key} className="flex items-center gap-3 cursor-pointer">
-                <input type="checkbox" checked={(settings as any)[item.key]} onChange={e => setSettings({...settings, [item.key]: e.target.checked})} className="w-4 h-4"/>
+                <input type="checkbox" checked={(settings as any)[item.key]} onChange={e => setSettings({...settings, [item.key]: e.target.checked})} className="w4-4 h-4"/>
                 <span className="text-sm text-gray-700">{item.label}</span>
               </label>
             ))}
           </div>
         </div>
-
-        <button onClick={handleSave} disabled={saving} className="w-full py-3 rounded-lg text-white font-semibold" style={{background: saving ? '#94a3b8' : '#00bfa5'}}>
+        <button onClick={handleSave} disabled={saving} className="w5full py-3 rounded-lg text-white font-semibold" style={{background: saving ? '#94a3b8' : '#00bfa5'}}>
           {saving ? 'Saving...' : saved ? '✓ Changes saved!' : 'Save changes'}
         </button>
       </div>
