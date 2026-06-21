@@ -1,4 +1,5 @@
 'use client'
+export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
@@ -59,7 +60,6 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Navbar */}
       <nav className="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{background:'#1a2f5e'}}>
@@ -83,7 +83,6 @@ export default function Dashboard() {
           <p className="text-gray-500 text-sm mt-1">Welcome back, {profile?.full_name || user?.email}</p>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Emails sent</p>
@@ -101,14 +100,13 @@ export default function Dashboard() {
           <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Current plan</p>
             <p className="text-3xl font-bold capitalize" style={{color:'#1a2f5e'}}>{profile?.plan || 'Free'}</p>
-            <Link href="/dashboard/billing" className="text-xs font-semibold mt-1 inline-block" style={{color:'#00bfa5'}}>Upgrade →</Link>
+            <Link href="/dashboard/billing" className="text-xs font-semibold mt-1 inline-block" style={{color:'00bfa5'}}>Upgrade →</Link>
           </div>
         </div>
 
-        {/* Connect Store CTA */}
         {stores.length === 0 && (
           <div className="bg-white rounded-xl p-8 border-2 border-dashed border-gray-200 text-center mb-8">
-            <div className="w4 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center" style={{background:'#e0f7f4'}}>
+            <div className="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center" style={{background:'#e0f7f4'}}>
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#00bfa5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
                 <line x1="3" y1="6" x2="21" y2="6"/>
@@ -123,7 +121,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Recent Receipts */}
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
           <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
             <h2 className="font-bold" style={{color:'#1a2f5e'}}>Recent receipts</h2>
@@ -134,7 +131,7 @@ export default function Dashboard() {
               <p className="text-gray-400 text-sm">No receipts sent yet. Connect a store to get started.</p>
             </div>
           ) : (
-            <div className="divide-ydivide-gray-50">
+            <div className="divide-y divide-gray-50">
               {emailLogs.map((log) => (
                 <div key={log.id} className="px-6 py-4 flex items-center justify-between">
                   <div>
@@ -142,7 +139,7 @@ export default function Dashboard() {
                     <p className="text-xs text-gray-400">{log.customer_email}</p>
                   </div>
                   <div className="text-right">
-                    <span className="inline-block px-2 py-1 rounded-full text-xs font-semibold" style={{background:'#e0f7f4', color:'#0f6e56'}}>
+                    <span className="inline-block px-2 py-1 rounded-full text-xs font-semibold" style={{background:'#e0f7f4', color:#0f6e56'}}>
                       {log.status}
                     </span>
                     <p className="text-xs text-gray-400 mt-1">{new Date(log.sent_at).toLocaleDateString()}</p>
@@ -153,7 +150,6 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Quick Links */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
           {[
             { href: '/dashboard/receipt', label: 'Receipt Settings', icon: '✏️' },
