@@ -1,14 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
+import { createHmac } from 'crypto'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
+
+async function verifyShopifyHmac(req: NextRequest, body: string): Promise<boolean> {
+  const hmacHeader = req.headers.get('x-shopify-hmac-sha256')
+  if (!hmacHeader) return false
+  const secret = process.env.SHOPIFY_API_SECRET!
+  const digest = createHmac('sha256', secret).update(body, 'utf8').digest('base64')
+  return digest === hmacHeader
+}
 
 export async function POST(req: NextRequest) {
   const shop = req.headers.get('x-shopify-shop-domain')
   if (!shop) return NextResponse.json({ error: 'Missing shop' }, { status: 400 })
 
-  const order = await req.json()
+  // Read raw body for HMAC verification before parsing
+  const rawBody = await req.text()
+  const isValid = await verifyShopifyHmac(req, rawBody)
+  if (!isValid) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const order = JSON.parse(rawBody)
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -82,16 +96,13 @@ export async function POST(req: NextRequest) {
       </div>
     </div>
 
-    <!-- Thank you message -->
     ${settings?.thank_you_message ? `<p style="margin:24px 0 0;font-size:14px;color:#64748b;line-height:1.6;">${settings.thank_you_message}</p>` : ''}
 
-    <!-- Return policy -->
     ${settings?.return_policy ? `
     <div style="margin-top:20px;padding:14px 16px;background:#f8fafc;border-radius:8px;border-left:3px solid ${brandColor};">
       <p style="margin:0;font-size:12px;color:#64748b;line-height:1.5;"><strong style="color:#334155;">Return policy:</strong> ${settings.return_policy}</p>
     </div>` : ''}
 
-    <!-- Social links -->
     ${settings?.show_social_links && (settings?.instagram_url || settings?.tiktok_url || settings?.facebook_url) ? `
     <div style="margin-top:24px;text-align:center;">
       <p style="font-size:12px;color:#94a3b8;margin-bottom:10px;">Follow us</p>
@@ -102,7 +113,6 @@ export async function POST(req: NextRequest) {
       </div>
     </div>` : ''}
 
-    <!-- Disclaimer -->
     ${settings?.disclaimer ? `<p style="margin-top:20px;font-size:11px;color:#94a3b8;line-height:1.5;">${settings.disclaimer}</p>` : ''}
   </div>
 
