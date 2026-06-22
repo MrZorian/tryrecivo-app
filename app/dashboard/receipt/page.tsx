@@ -5,11 +5,108 @@ import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
+const STYLES = [
+  {
+    id: 'bold',
+    name: 'Bold',
+    desc: 'Vibrant header with your brand color',
+    preview: (color: string) => (
+      <div style={{background:'#f0f4f8',borderRadius:8,padding:10,fontSize:10,fontFamily:'sans-serif'}}>
+        <div style={{background:color,borderRadius:6,padding:'8px 10px',color:'white',marginBottom:6}}>
+          <div style={{fontWeight:800,fontSize:12}}>Order confirmed! ð</div>
+          <div style={{opacity:0.7,fontSize:9}}>Order #1001 Â· Jun 22, 2026</div>
+        </div>
+        <div style={{background:'white',borderRadius:6,padding:'8px 10px'}}>
+          <div style={{borderBottom:'1px solid #f1f5f9',paddingBottom:4,marginBottom:4,display:'flex',justifyContent:'space-between'}}>
+            <span style={{color:'#334155'}}>Item Ã1</span><span style={{color:'#334155'}}>$49.99</span>
+          </div>
+          <div style={{background:'#e0f7f4',borderRadius:4,padding:'4px 8px',display:'flex',justifyContent:'space-between',marginTop:4}}>
+            <span style={{fontWeight:800,color:'#085041',fontSize:11}}>Total</span><span style={{fontWeight:800,color:'#085041',fontSize:11}}>$49.99</span>
+          </div>
+        </div>
+      </div>
+    )
+  },
+  {
+    id: 'minimal',
+    name: 'Minimal',
+    desc: 'Clean serif typography, no backgrounds',
+    preview: () => (
+      <div style={{background:'white',borderRadius:8,padding:12,fontFamily:'Georgia,serif',fontSize:10}}>
+        <div style={{borderBottom:'2px solid #111',paddingBottom:8,marginBottom:8}}>
+          <div style={{fontSize:9,letterSpacing:2,textTransform:'uppercase',color:'#888'}}>Store Name</div>
+          <div style={{fontSize:14,color:'#111',marginTop:2}}>Order Receipt</div>
+        </div>
+        <div style={{color:'#999',fontSize:9,letterSpacing:1,marginBottom:4}}>ORDER #1001 Â· Jun 22, 2026</div>
+        <div style={{display:'flex',justifyContent:'space-between',borderBottom:'1px solid #f5f5f5',paddingBottom:4,marginBottom:4}}>
+          <span style={{color:'#333'}}>Item Ã1</span><span style={{color:'#333'}}>$49.99</span>
+        </div>
+        <div style={{display:'flex',justifyContent:'space-between',borderTop:'1px solid #111',paddingTop:4}}>
+          <span style={{fontWeight:'bold',color:'#111'}}>Total</span><span style={{fontWeight:'bold',color:'#111'}}>$49.99</span>
+        </div>
+      </div>
+    )
+  },
+  {
+    id: 'classic',
+    name: 'Classic',
+    desc: 'Traditional bordered table layout',
+    preview: (color: string) => (
+      <div style={{background:'#f5f5f5',borderRadius:8,padding:10,fontFamily:'Arial,sans-serif',fontSize:10}}>
+        <div style={{background:color,padding:'6px 10px',borderRadius:'4px 4px 0 0',display:'flex',justifyContent:'space-between'}}>
+          <span style={{color:'white',fontWeight:'bold',fontSize:11}}>Store Name</span>
+          <span style={{color:'rgba(255,255,255,0.7)',fontSize:9}}>ORDER RECEIPT</span>
+        </div>
+        <div style={{background:'white',border:'1px solid #ddd',borderTop:'none'}}>
+          <div style={{background:'#f0f0f0',display:'flex',borderBottom:'1px solid #ddd'}}>
+            <span style={{flex:1,padding:'4px 8px',color:'#666',fontSize:9,textTransform:'uppercase'}}>Item</span>
+            <span style={{width:30,padding:'4px 4px',color:'#666',fontSize:9,textAlign:'center'}}>Qty</span>
+            <span style={{width:40,padding:'4px 8px',color:'#666',fontSize:9,textAlign:'right'}}>Price</span>
+          </div>
+          <div style={{display:'flex',borderBottom:'1px solid #ddd'}}>
+            <span style={{flex:1,padding:'5px 8px',color:'#333'}}>Item</span>
+            <span style={{width:30,padding:'5px 4px',color:'#333',textAlign:'center'}}>Ã1</span>
+            <span style={{width:40,padding:'5px 8px',color:'#333',textAlign:'right'}}>$49.99</span>
+          </div>
+          <div style={{display:'flex',background:'#f0f0f0'}}>
+            <span style={{flex:1,padding:'5px 8px',fontWeight:'bold',color:'#333'}}>TOTAL</span>
+            <span style={{width:40,padding:'5px 8px',fontWeight:'bold',color:color,textAlign:'right'}}>$49.99</span>
+          </div>
+        </div>
+      </div>
+    )
+  },
+  {
+    id: 'luxury',
+    name: 'Luxury',
+    desc: 'Dark elegant design with gold accents',
+    preview: () => (
+      <div style={{background:'#1a1a1a',borderRadius:8,padding:10,fontFamily:'Georgia,serif',fontSize:10}}>
+        <div style={{borderBottom:'2px solid #c9a84c',paddingBottom:8,marginBottom:10,textAlign:'center'}}>
+          <div style={{fontSize:9,letterSpacing:3,textTransform:'uppercase',color:'#c9a84c',marginBottom:3}}>Store Name</div>
+          <div style={{fontSize:12,color:'white',letterSpacing:2,textTransform:'uppercase'}}>Order Confirmed</div>
+          <div style={{fontSize:9,color:'#777',marginTop:2}}>No. 1001 Â· Jun 22, 2026</div>
+        </div>
+        <div>
+          <div style={{display:'flex',justifyContent:'space-between',borderBottom:'1px solid #333',paddingBottom:5,marginBottom:5}}>
+            <span style={{color:'#ccc'}}>Item Ã1</span><span style={{color:'#ccc'}}>$49.99</span>
+          </div>
+          <div style={{background:'#111',borderRadius:3,padding:'6px 8px',display:'flex',justifyContent:'space-between'}}>
+            <span style={{color:'#c9a84c',fontSize:9,letterSpacing:2,textTransform:'uppercase'}}>Total</span>
+            <span style={{color:'#c9a84c',fontWeight:'bold',fontSize:12}}>$49.99</span>
+          </div>
+        </div>
+      </div>
+    )
+  },
+]
+
 export default function ReceiptSettings() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [store, setStore] = useState<any>(null)
   const [settings, setSettings] = useState({
+    receipt_style: 'bold',
     brand_color: '#1a2f5e',
     thank_you_message: 'Thank you for your order! We appreciate your business.',
     return_policy: 'Returns accepted within 30 days of purchase.',
@@ -34,7 +131,7 @@ export default function ReceiptSettings() {
       if (stores && stores.length > 0) {
         setStore(stores[0])
         const { data: existing } = await supabase.from('receipt_settings').select('*').eq('store_id', stores[0].id).single()
-        if (existing) setSettings({ ...settings, ...existing })
+        if (existing) setSettings(s => ({ ...s, ...existing }))
       }
       setLoading(false)
     }
@@ -56,12 +153,12 @@ export default function ReceiptSettings() {
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/dashboard" className="text-gray-400 hover:text-gray-600 text-sm">← Dashboard</Link>
+          <Link href="/dashboard" className="text-gray-400 hover:text-gray-600 text-sm">â Dashboard</Link>
           <span className="text-gray-300">/</span>
           <span className="font-semibold text-sm" style={{color:'#1a2f5e'}}>Receipt Settings</span>
         </div>
         <button onClick={handleSave} disabled={saving} className="px-5 py-2 rounded-lg text-white text-sm font-semibold" style={{background: saving ? '#94a3b8' : '#00bfa5'}}>
-          {saving ? 'Saving...' : saved ? '✓ Saved!' : 'Save changes'}
+          {saving ? 'Saving...' : saved ? 'â Saved!' : 'Save changes'}
         </button>
       </nav>
 
@@ -70,21 +167,45 @@ export default function ReceiptSettings() {
 
         {!store && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
-            ⚠️ Connect a Shopify store first before customizing receipts.{' '}
-            <Link href="/dashboard/connect" className="font-semibold underline">Connect now →</Link>
+            â ï¸ Connect a Shopify store first.{' '}
+            <Link href="/dashboard/connect" className="font-semibold underline">Connect now â</Link>
           </div>
         )}
+
+        {/* Receipt Style Picker */}
+        <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+          <h2 className="font-bold mb-1" style={{color:'#1a2f5e'}}>Receipt style</h2>
+          <p className="text-sm text-gray-400 mb-5">Choose how your receipt emails look to customers.</p>
+          <div className="grid grid-cols-2 gap-4">
+            {STYLES.map(s => (
+              <button
+                key={s.id}
+                onClick={() => setSettings({...settings, receipt_style: s.id})}
+                className={`rounded-xl border-2 p-3 text-left transition-all ${settings.receipt_style === s.id ? 'border-[#00bfa5] shadow-md' : 'border-gray-100 hover:border-gray-200'}`}
+              >
+                <div className="mb-3 pointer-events-none">
+                  {s.preview(settings.brand_color)}
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className={`w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 ${settings.receipt_style === s.id ? 'border-[#00bfa5] bg-[#00bfa5]' : 'border-gray-300'}`}/>
+                  <div>
+                    <p className="font-semibold text-sm" style={{color:'#1a2f5e'}}>{s.name}</p>
+                    <p className="text-xs text-gray-400">{s.desc}</p>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* Brand Color */}
         <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
           <h2 className="font-bold mb-4" style={{color:'#1a2f5e'}}>Branding</h2>
-          <div className="flex items-center gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Brand color</label>
-              <div className="flex items-center gap-3">
-                <input type="color" value={settings.brand_color} onChange={e => setSettings({...settings, brand_color: e.target.value})} className="w-12 h-10 rounded cursor-pointer border border-gray-200"/>
-                <input type="text" value={settings.brand_color} onChange={e => setSettings({...settings, brand_color: e.target.value})} className="px-3 py-2 border border-gray-200 rounded-lg text-sm w-32 text-gray-900"/>
-              </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Brand color</label>
+            <div className="flex items-center gap-3">
+              <input type="color" value={settings.brand_color} onChange={e => setSettings({...settings, brand_color: e.target.value})} className="w-12 h-10 rounded cursor-pointer border border-gray-200"/>
+              <input type="text" value={settings.brand_color} onChange={e => setSettings({...settings, brand_color: e.target.value})} className="px-3 py-2 border border-gray-200 rounded-lg text-sm w-32 text-gray-900"/>
             </div>
           </div>
         </div>
@@ -144,7 +265,7 @@ export default function ReceiptSettings() {
         </div>
 
         <button onClick={handleSave} disabled={saving} className="w-full py-3 rounded-lg text-white font-semibold" style={{background: saving ? '#94a3b8' : '#00bfa5'}}>
-          {saving ? 'Saving...' : saved ? '✓ Changes saved!' : 'Save changes'}
+          {saving ? 'Saving...' : saved ? 'â Changes saved!' : 'Save changes'}
         </button>
       </div>
     </div>
