@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name) { return req.cookies.get(name)?.value },
+        get(name: string) { return req.cookies.get(name)?.value },
         set() {},
         remove() {},
       },
