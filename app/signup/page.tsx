@@ -18,14 +18,37 @@ export default function SignupPage() {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const { error } = await supabase.auth.signUp({
+
+    const { data, error: signupError } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: name } }
+      options: {
+        data: { full_name: name },
+        emailRedirectTo: `${window.location.origin}/dashboard`,
+      }
     })
-    if (error) {
-      setError(error.message)
+
+    if (signupError) {
+      setError(signupError.message)
       setLoading(false)
+      return
+    }
+
+    // Send custom welcome email
+    try {
+      await fetch('/api/auth/welcome', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, name }),
+      })
+    } catch (_) {
+      // Non-blocking â don't fail signup if welcome email fails
+    }
+
+    // Check if email confirmation is required
+    const needsConfirmation = !data.session
+    if (needsConfirmation) {
+      router.push(`/verify-email?email=${encodeURIComponent(email)}`)
     } else {
       router.push('/dashboard')
     }
@@ -88,24 +111,4 @@ export default function SignupPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-lg text-white font-semibold transition-all"
-            style={{background: loading ? '#94a3b8' : '#00bfa5'}}
-          >
-            {loading ? 'Creating account...' : 'Create free account'}
-          </button>
-
-          <p className="text-xs text-gray-400 text-center">
-            Free plan includes 500 emails/month. No credit card needed.
-          </p>
-        </form>
-
-        <p className="text-center text-sm text-gray-500 mt-6">
-          Already have an account?{' '}
-          <Link href="/login" className="font-semibold" style={{color:'#1a2f5e'}}>
-            Sign in
-          </Link>
-        </p>
-      </div>
-    </div>
-  )
-}
+            className="w-full py-3 rounded-lg text-w
