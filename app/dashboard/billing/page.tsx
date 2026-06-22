@@ -93,12 +93,120 @@ function BillingContent() {
   return (
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white border-b border-gray-100 px-6 py-4 flex items-center gap-3">
-        <Link href="/dashboard" className="text-gray-400 hover:text-gray-600 text-sm">â Dashboard</Link>
+        <Link href="/dashboard" className="text-gray-400 hover:text-gray-600 text-sm">Back to Dashboard</Link>
         <span className="text-gray-300">/</span>
         <span className="font-semibold text-sm" style={{color:'#1a2f5e'}}>Billing</span>
       </nav>
 
       <div className="max-w-5xl mx-auto px-6 py-8">
-        {/* Success banner */}
         {upgraded && (
-          <div className="mb-6 
+          <div className="mb-6 bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center gap-3">
+            <span className="text-2xl">ð</span>
+            <div>
+              <p className="font-semibold text-emerald-800">Plan upgraded successfully!</p>
+              <p className="text-sm text-emerald-600">Your new limits are active immediately.</p>
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">
+            {error === 'charge_declined' ? 'Upgrade was cancelled. No charge was made.' : `Something went wrong (${error}). Please try again.`}
+          </div>
+        )}
+
+        {!hasStore && (
+          <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
+            You need to <Link href="/dashboard/connect" className="font-semibold underline">connect a Shopify store</Link> before upgrading. Billing is handled through Shopify.
+          </div>
+        )}
+
+        <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm mb-8">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <span className="text-sm font-semibold text-gray-700">Current usage</span>
+              <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-bold text-white capitalize" style={{background:'#1a2f5e'}}>{currentPlan}</span>
+            </div>
+            <span className="text-sm text-gray-500">{emailsUsed.toLocaleString()} / {emailsLimit === 999999 ? 'Unlimited' : emailsLimit.toLocaleString()} emails</span>
+          </div>
+          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-full rounded-full transition-all" style={{width:`${Math.min(100,(emailsUsed/Math.max(emailsLimit,1))*100)}%`, background:'#00bfa5'}}/>
+          </div>
+        </div>
+
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold mb-2" style={{color:'#1a2f5e'}}>Choose your plan</h1>
+          <p className="text-gray-500 text-sm">Billed monthly through Shopify. Cancel anytime.</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+          {plans.map(plan => {
+            const isCurrent = currentPlan === plan.id
+            const isHigher = plans.findIndex(p => p.id === plan.id) > plans.findIndex(p => p.id === currentPlan)
+
+            return (
+              <div key={plan.id} className={`bg-white rounded-xl p-6 border shadow-sm relative flex flex-col ${plan.popular ? 'border-2' : 'border-gray-100'}`} style={plan.popular ? {borderColor:'#1a2f5e'} : {}}>
+                {plan.popular && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-bold text-white whitespace-nowrap" style={{background:'#1a2f5e'}}>MOST POPULAR</div>
+                )}
+                {isCurrent && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-bold text-white whitespace-nowrap" style={{background:'#00bfa5'}}>CURRENT PLAN</div>
+                )}
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">{plan.name}</p>
+                <p className="text-3xl font-bold mb-1" style={{color:'#1a2f5e'}}>${plan.price}<span className="text-base font-normal text-gray-400">/mo</span></p>
+                <p className="text-xs font-semibold mb-5" style={{color:'#00bfa5'}}>{plan.emails} emails/mo</p>
+
+                <ul className="space-y-2 mb-6 flex-1">
+                  {plan.features.map(f => (
+                    <li key={f} className="flex items-start gap-2 text-sm text-gray-700">
+                      <span style={{color:'#00bfa5'}}>&#10003;</span> {f}
+                    </li>
+                  ))}
+                  {plan.locked.map(f => (
+                    <li key={f} className="flex items-start gap-2 text-sm text-gray-300">
+                      <span>&#10007;</span> {f}
+                    </li>
+                  ))}
+                </ul>
+
+                {isCurrent ? (
+                  <button disabled className="w-full py-2.5 rounded-lg text-sm font-semibold bg-gray-100 text-gray-400 cursor-default">
+                    Current plan
+                  </button>
+                ) : plan.price === 0 ? (
+                  <button disabled className="w-full py-2.5 rounded-lg text-sm font-semibold bg-gray-50 text-gray-400 cursor-default border border-gray-200">
+                    Free
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleUpgrade(plan.id)}
+                    disabled={upgrading === plan.id}
+                    className="w-full py-2.5 rounded-lg text-sm font-semibold transition-all"
+                    style={plan.popular
+                      ? {background: upgrading === plan.id ? '#94a3b8' : '#1a2f5e', color:'white'}
+                      : {background:'transparent', color:'#1a2f5e', border:'1.5px solid #1a2f5e', opacity: upgrading === plan.id ? 0.6 : 1}
+                    }
+                  >
+                    {upgrading === plan.id ? 'Redirecting...' : isHigher ? 'Upgrade' : 'Downgrade'}
+                  </button>
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        <p className="text-center text-xs text-gray-400 mt-8">
+          All plans billed via Shopify. No separate credit card needed.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+export default function Billing() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><p className="text-gray-400">Loading...</p></div>}>
+      <BillingContent />
+    </Suspense>
+  )
+}
