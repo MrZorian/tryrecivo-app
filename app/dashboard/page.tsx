@@ -62,7 +62,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gray-50">
       {/* Navbar */}
       <nav className="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <Link href="/dashboard" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{background:'#1a2f5e'}}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <rect x="3" y="5" width="18" height="13" rx="2" stroke="#00bfa5" strokeWidth="2"/>
@@ -70,7 +70,7 @@ export default function Dashboard() {
             </svg>
           </div>
           <span className="font-bold text-lg" style={{color:'#1a2f5e'}}>tryrecivo</span>
-        </div>
+        </Link>
         <div className="flex items-center gap-4">
           <span className="text-sm text-gray-500">{user?.email}</span>
           <button onClick={handleSignOut} className="text-sm text-gray-400 hover:text-gray-600 transition-colors">Sign out</button>
