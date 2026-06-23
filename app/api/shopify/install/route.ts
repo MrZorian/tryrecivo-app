@@ -6,7 +6,8 @@ export async function GET(req: NextRequest) {
 
   const APP_URL = process.env.NEXT_PUBLIC_APP_URL!
   const apiKey = process.env.SHOPIFY_API_KEY!
-  const scopes = 'read_orders,read_customers'
+  // Added write_script_tags to force a new token (different scope = fresh token)
+  const scopes = 'read_orders,read_customers,write_script_tags'
   const redirectUri = `${APP_URL}/api/shopify/callback`
   const state = Math.random().toString(36).substring(2)
 
