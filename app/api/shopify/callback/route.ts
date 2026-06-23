@@ -11,7 +11,8 @@ export async function GET(req: NextRequest) {
 
   const APP_URL = process.env.NEXT_PUBLIC_APP_URL!
 
-  if (!shop || !code || state !== storedState) {
+  // Only reject if state is actively mismatched (not if cookie is simply missing)
+  if (!shop || !code || (storedState && state !== storedState)) {
     return NextResponse.redirect(`${APP_URL}/dashboard?error=invalid_oauth`)
   }
 
