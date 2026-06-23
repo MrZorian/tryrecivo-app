@@ -19,6 +19,10 @@ export interface ReceiptSettings {
   pinterest_url?: string
   youtube_url?: string
   linkedin_url?: string
+  custom_links?: Array<{label: string, url: string}> | string | null
+  recivo_link_hidden?: boolean
+  recivo_link_url?: string
+  recivo_link_label?: string
 }
 
 // Backward-compat alias: old style names → new names
@@ -84,6 +88,31 @@ function buildSocialLinks(settings: ReceiptSettings, brandColor: string): string
   </div>`
 }
 
+function buildCustomLinks(settings: ReceiptSettings, brandColor: string): string {
+  let links: Array<{label: string, url: string}> = []
+  if (settings.custom_links) {
+    if (typeof settings.custom_links === 'string') {
+      try { links = JSON.parse(settings.custom_links) } catch {}
+    } else if (Array.isArray(settings.custom_links)) {
+      links = settings.custom_links as Array<{label: string, url: string}>
+    }
+  }
+  const valid = links.filter(l => l.label && l.url)
+  if (valid.length === 0) return ''
+  const items = valid.map(l =>
+    `<a href="${l.url}" target="_blank" style="color:${brandColor};text-decoration:none;font-size:13px;font-weight:600;margin:0 6px;">${l.label}</a>`
+  ).join('<span style="color:#cbd5e1;"> · </span>')
+  return `<div style="margin-top:18px;padding:12px 0;text-align:center;border-top:1px solid #f1f5f9;">${items}</div>`
+}
+
+function buildRecivoAttribution(settings: ReceiptSettings, isPaidPlan: boolean): string {
+  if (!isPaidPlan) return '' // free plan already has recivoFreeHeader + brandingFooter
+  if (settings.recivo_link_hidden) return ''
+  const url = settings.recivo_link_url || 'https://tryrecivo.com'
+  const label = settings.recivo_link_label || 'Powered by tryrecivo'
+  return `<p style="margin-top:12px;margin-bottom:0;text-align:center;"><a href="${url}" target="_blank" style="font-size:11px;color:#94a3b8;text-decoration:none;">${label}</a></p>`
+}
+
 export function buildEmailHtml(
   order: OrderData,
   store: StoreData,
@@ -126,6 +155,8 @@ export function buildEmailHtml(
     ? `<tr><td style="font-size:13px;color:#64748b;padding:4px 0;">Tax</td><td style="font-size:13px;color:#334155;text-align:right;padding:4px 0;">$${order.total_tax || '0.00'}</td></tr>` : ''
 
   const socialLinks = buildSocialLinks(settings || {}, brandColor)
+  const customLinks = buildCustomLinks(settings || {}, brandColor)
+  const recivoAttribution = buildRecivoAttribution(settings || {}, isPaidPlan)
   const customerName = `${order.customer?.first_name || ''} ${order.customer?.last_name || ''}`.trim() || 'there'
   const orderDate = new Date(order.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
 
@@ -159,7 +190,9 @@ export function buildEmailHtml(
     </table>
     ${settings?.thank_you_message ? `<p style="margin:24px 0 0;font-size:14px;color:#64748b;line-height:1.7;">${settings.thank_you_message}</p>` : ''}
     ${settings?.return_policy ? `<div style="margin-top:20px;padding:14px 16px;background:#f8fafc;border-radius:8px;border-left:3px solid ${brandColor};"><p style="margin:0;font-size:12px;color:#64748b;line-height:1.6;"><strong style="color:#334155;">Returns:</strong> ${settings.return_policy}</p></div>` : ''}
+    ${customLinks}
     ${socialLinks}
+    ${recivoAttribution}
     ${settings?.disclaimer ? `<p style="margin-top:20px;font-size:11px;color:#94a3b8;line-height:1.5;">${settings.disclaimer}</p>` : ''}
   </td></tr>
   ${brandingFooter}
@@ -195,7 +228,9 @@ export function buildEmailHtml(
     </table>
     ${settings?.thank_you_message ? `<p style="margin:28px 0 0;font-size:13px;color:#555;line-height:1.8;font-style:italic;">"${settings.thank_you_message}"</p>` : ''}
     ${settings?.return_policy ? `<p style="margin:16px 0 0;font-size:11px;color:#888;line-height:1.6;border-top:1px solid #eee;padding-top:16px;">${settings.return_policy}</p>` : ''}
+    ${customLinks}
     ${socialLinks}
+    ${recivoAttribution}
     ${settings?.disclaimer ? `<p style="margin-top:16px;font-size:10px;color:#bbb;line-height:1.5;">${settings.disclaimer}</p>` : ''}
   </td></tr>
   ${brandingFooter}
@@ -245,7 +280,9 @@ export function buildEmailHtml(
     </table>
     ${settings?.thank_you_message ? `<p style="margin:20px 0 0;font-size:13px;color:#555;line-height:1.7;padding:12px;background:#f9f9f9;border-left:3px solid ${brandColor};">${settings.thank_you_message}</p>` : ''}
     ${settings?.return_policy ? `<p style="margin:12px 0 0;font-size:11px;color:#888;line-height:1.5;">${settings.return_policy}</p>` : ''}
+    ${customLinks}
     ${socialLinks}
+    ${recivoAttribution}
     ${settings?.disclaimer ? `<p style="margin-top:12px;font-size:10px;color:#bbb;line-height:1.5;">${settings.disclaimer}</p>` : ''}
   </td></tr>
   ${brandingFooter}
@@ -266,7 +303,7 @@ export function buildEmailHtml(
   <tr><td style="background:#111;padding:40px 40px 32px;text-align:center;border-bottom:3px solid ${goldColor};">
     ${logoBlock}<p style="margin:0 0 12px;font-size:10px;letter-spacing:4px;text-transform:uppercase;color:${goldColor};">${storeName}</p>
     <h1 style="margin:0 0 8px;font-size:20px;font-weight:normal;color:white;letter-spacing:2px;text-transform:uppercase;">Order Confirmed</h1>
-    <p style="margin:0;font-size:12px;color:#aaa;letter-spacing:1px;">No. ${order.order_number} &nbsp;·&nbsp; ${orderDate}</p>
+    <p style="margin:0;font-size:12px;color:#aaa;letter-spacing:1px;">No. ${order.order_number}  ·  ${orderDate}</p>
   </td></tr>
   <tr><td style="padding:36px 40px;">${recivoFreeHeader ? `<div style="margin-bottom:16px;">${recivoFreeHeader}</div>` : ''}
     <p style="margin:0 0 24px;font-size:15px;color:#444;font-style:italic;">Dear ${customerName},</p>
@@ -281,7 +318,9 @@ export function buildEmailHtml(
     </table>
     ${settings?.thank_you_message ? `<p style="margin:28px 0 0;font-size:13px;color:#555;line-height:1.9;text-align:center;font-style:italic;">"${settings.thank_you_message}"</p>` : ''}
     ${settings?.return_policy ? `<p style="margin:20px 0 0;font-size:11px;color:#888;line-height:1.7;padding-top:16px;border-top:1px solid #e8e0d0;">${settings.return_policy}</p>` : ''}
+    ${customLinks}
     ${socialLinks}
+    ${recivoAttribution}
     ${settings?.disclaimer ? `<p style="margin-top:16px;font-size:10px;color:#bbb;line-height:1.5;">${settings.disclaimer}</p>` : ''}
   </td></tr>
   <tr><td style="background:#111;padding:16px 40px;text-align:center;border-top:1px solid #333;">
