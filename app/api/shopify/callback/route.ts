@@ -8,16 +8,19 @@ export async function GET(req: NextRequest) {
   const code = searchParams.get('code')
   const state = searchParams.get('state')
   const storedState = req.cookies.get('shopify_state')?.value
+
   const APP_URL = process.env.NEXT_PUBLIC_APP_URL!
 
   if (!shop || !code || !state) {
     return NextResponse.redirect(`${APP_URL}/dashboard?error=invalid_oauth`)
   }
+
+  // State check only if cookie was actually sent (may be missing after cross-origin redirect)
   if (storedState && state !== storedState) {
     return NextResponse.redirect(`${APP_URL}/dashboard?error=state_mismatch`)
   }
 
-  // Exchange code for access token
+  // Exchange code for expiring access token (expiring: 1 requests shpat_ format)
   const tokenRes = await fetch(`https://${shop}/admin/oauth/access_token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -25,55 +28,81 @@ export async function GET(req: NextRequest) {
       client_id: process.env.SHOPIFY_API_KEY,
       client_secret: process.env.SHOPIFY_API_SECRET,
       code,
+      expiring: 1,
     }),
   })
+
   const tokenJson = await tokenRes.json()
   const access_token = tokenJson.access_token
-
-  // Debug: log token exchange result to Supabase shop_name
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-  const debugInfo = access_token
-    ? `TOKEN_OK:${access_token.slice(0,15)} at ${new Date().toISOString()}`
-    : `TOKEN_FAIL:${JSON.stringify(tokenJson).slice(0,80)} at ${new Date().toISOString()}`
-
-  await supabase.from('stores').update({ shop_name: debugInfo }).eq('shop_domain', shop)
-
+  const refresh_token = tokenJson.refresh_token || null
+  const expires_in = tokenJson.expires_in || null
+  const token_expires_at = expires_in
+    ? new Date(Date.now() + expires_in * 1000).toISOString()
+    : null
   if (!access_token) {
+    console.error('Shopify token exchange failed:', JSON.stringify(tokenJson))
     return NextResponse.redirect(`${APP_URL}/dashboard?error=no_token`)
   }
 
+  // Get shop info
   const shopRes = await fetch(`https://${shop}/admin/api/2026-04/shop.json`, {
     headers: { 'X-Shopify-Access-Token': access_token },
   })
   const { shop: shopData } = await shopRes.json()
 
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
   const { data: existingStore } = await supabase
-    .from('stores').select('id, user_id').eq('shop_domain', shop).single()
+    .from('stores')
+    .select('id, user_id')
+    .eq('shop_domain', shop)
+    .single()
 
   if (existingStore) {
     const { error: updateErr } = await supabase
       .from('stores')
-      .update({ access_token, shop_name: shopData?.name || shop })
+      .update({
+        access_token,
+        shop_name: shopData?.name || shop,
+        ...(refresh_token && { refresh_token }),
+        ...(token_expires_at && { token_expires_at }),
+      })
       .eq('shop_domain', shop)
-    if (updateErr) console.error('Update failed:', updateErr.message)
+    if (updateErr) console.error('Store token update failed:', updateErr.message)
   } else {
     const supabaseAuth = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { cookies: { get(name: string) { return req.cookies.get(name)?.value }, set() {}, remove() {} } }
+      {
+        cookies: {
+          get(name: string) { return req.cookies.get(name)?.value },
+          set() {},
+          remove() {},
+        },
+      }
     )
     const { data: { user } } = await supabaseAuth.auth.getUser()
     if (!user) return NextResponse.redirect(`${APP_URL}/login`)
-    await supabase.from('stores').insert({ user_id: user.id, shop_domain: shop, shop_name: shopData?.name || shop, access_token })
+
+    await supabase.from('stores').insert({
+      user_id: user.id,
+      shop_domain: shop,
+      shop_name: shopData?.name || shop,
+      access_token,
+      ...(refresh_token && { refresh_token }),
+      ...(token_expires_at && { token_expires_at }),
+    })
   }
 
   await fetch(`https://${shop}/admin/api/2026-04/webhooks.json`, {
     method: 'POST',
     headers: { 'X-Shopify-Access-Token': access_token, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ webhook: { topic: 'orders/paid', address: `${APP_URL}/api/webhooks/orders`, format: 'json' } }),
+    body: JSON.stringify({
+      webhook: { topic: 'orders/paid', address: `${APP_URL}/api/webhooks/orders`, format: 'json' },
+    }),
   })
 
   return NextResponse.redirect(`${APP_URL}/dashboard?connected=true`)
