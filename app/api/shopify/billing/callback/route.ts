@@ -11,11 +11,12 @@ const PLAN_LIMITS: Record<string, { emails_limit: number }> = {
 export async function GET(req: NextRequest) {
   const APP_URL = process.env.NEXT_PUBLIC_APP_URL!
   const { searchParams } = req.nextUrl
+  // GraphQL billing returns charge_id as the subscription GID or numeric id
   const chargeId = searchParams.get('charge_id')
   const planId = searchParams.get('plan')
   const shop = searchParams.get('shop')
 
-  if (!chargeId || !planId || !shop) {
+  if (!planId || !shop) {
     return NextResponse.redirect(`${APP_URL}/dashboard/billing?error=missing_params`)
   }
 
@@ -50,28 +51,46 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${APP_URL}/dashboard/billing?error=store_not_found`)
   }
 
-  // Verify charge status with Shopify
-  const chargeRes = await fetch(
-    `https://${shop}/admin/api/2024-01/recurring_application_charges/${chargeId}.json`,
-    { headers: { 'X-Shopify-Access-Token': store.access_token } }
-  )
-  const { recurring_application_charge: charge } = await chargeRes.json()
+  // Verify subscription status via GraphQL
+  const query = `
+    query getSubscription($id: ID!) {
+      node(id: $id) {
+        ... on AppSubscription {
+          id
+          status
+        }
+      }
+    }
+  `
+  // charge_id from Shopify can be numeric -- build GID if needed
+  const gid = chargeId && chargeId.startsWith('gid://') ? chargeId : `gid://shopify/AppSubscription/${chargeId}`
 
-  if (!charge || charge.status !== 'accepted') {
+  const verifyRes = await fetch(`https://${shop}/admin/api/2024-01/graphql.json`, {
+    method: 'POST',
+    headers: { 'X-Shopify-Access-Token': store.access_token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query, variables: { id: gid } }),
+  })
+  const verifyJson = await verifyRes.json()
+  const subscription = verifyJson?.data?.node
+
+  if (!subscription || subscription.status !== 'ACCEPTED') {
     return NextResponse.redirect(`${APP_URL}/dashboard/billing?error=charge_declined`)
   }
 
-  // Activate the charge
-  await fetch(
-    `https://${shop}/admin/api/2024-01/recurring_application_charges/${chargeId}/activate.json`,
-    {
-      method: 'POST',
-      headers: {
-        'X-Shopify-Access-Token': store.access_token,
-        'Content-Type': 'application/json',
-      },
+  // Activate the subscription
+  const activateMutation = `
+    mutation appSubscriptionActivate($id: ID!) {
+      appSubscriptionActivate(id: $id) {
+        appSubscription { id status }
+        userErrors { field message }
+      }
     }
-  )
+  `
+  await fetch(`https://${shop}/admin/api/2024-01/graphql.json`, {
+    method: 'POST',
+    headers: { 'X-Shopify-Access-Token': store.access_token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query: activateMutation, variables: { id: gid } }),
+  })
 
   // Update user plan + limits in Supabase
   const planLimits = PLAN_LIMITS[planId] || { emails_limit: 500 }
