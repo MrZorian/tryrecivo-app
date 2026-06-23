@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createServerClient } from '@supabase/ssr'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
@@ -14,15 +15,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${APP_URL}/dashboard?error=invalid_oauth`)
   }
 
-  // Only check state cookie if it was actually set (may be missing after cross-origin redirect)
+  // State check only if cookie was actually sent (may be missing after cross-origin redirect)
   if (storedState && state !== storedState) {
     return NextResponse.redirect(`${APP_URL}/dashboard?error=state_mismatch`)
-  }
-
-  // Extract user ID from state (format: "random.userId")
-  const userId = state.includes('.') ? state.split('.').slice(1).join('.') : null
-  if (!userId) {
-    return NextResponse.redirect(`${APP_URL}/dashboard?error=no_user_in_state`)
   }
 
   // Exchange code for access token
@@ -39,28 +34,63 @@ export async function GET(req: NextRequest) {
   const tokenJson = await tokenRes.json()
   const access_token = tokenJson.access_token
   if (!access_token) {
-    console.error('Token exchange failed:', JSON.stringify(tokenJson))
+    console.error('Shopify token exchange failed:', JSON.stringify(tokenJson))
     return NextResponse.redirect(`${APP_URL}/dashboard?error=no_token`)
   }
 
-  // Get shop info from Shopify
+  // Get shop info
   const shopRes = await fetch(`https://${shop}/admin/api/2026-04/shop.json`, {
     headers: { 'X-Shopify-Access-Token': access_token },
   })
   const { shop: shopData } = await shopRes.json()
 
-  // Save store using service role (no session needed)
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  await supabase.from('stores').upsert({
-    user_id: userId,
-    shop_domain: shop,
-    shop_name: shopData?.name || shop,
-    access_token,
-  }, { onConflict: 'shop_domain' })
+  // Check if this store already exists → just update the token
+  const { data: existingStore } = await supabase
+    .from('stores')
+    .select('id, user_id')
+    .eq('shop_domain', shop)
+    .single()
+
+  if (existingStore) {
+    // Reinstall: update token on existing store record
+    const { error: updateErr } = await supabase
+      .from('stores')
+      .update({
+        access_token,
+        shop_name: shopData?.name || shop,
+      })
+      .eq('shop_domain', shop)
+    if (updateErr) {
+      console.error('Store token update failed:', updateErr.message)
+    }
+  } else {
+    // New install: need user session to create the association
+    const supabaseAuth = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) { return req.cookies.get(name)?.value },
+          set() {},
+          remove() {},
+        },
+      }
+    )
+    const { data: { user } } = await supabaseAuth.auth.getUser()
+    if (!user) return NextResponse.redirect(`${APP_URL}/login`)
+
+    await supabase.from('stores').insert({
+      user_id: user.id,
+      shop_domain: shop,
+      shop_name: shopData?.name || shop,
+      access_token,
+    })
+  }
 
   // Register orders/paid webhook
   await fetch(`https://${shop}/admin/api/2026-04/webhooks.json`, {
