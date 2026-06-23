@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 const PLANS: Record<string, { name: string; price: number; emails: number }> = {
   starter: { name: 'Recivo Starter', price: 19, emails: 5000 },
   growth:  { name: 'Recivo Growth',  price: 49, emails: 20000 },
-  pro:     { name: 'Recivo Pro',     price: 99, emails: 0 }, // 0 = unlimited
+  pro:     { name: 'Recivo Pro',     price: 99, emails: 0 },
 }
 
 export async function GET(req: NextRequest) {
@@ -17,8 +17,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${APP_URL}/dashboard/billing?error=invalid_plan`)
   }
 
-  // Auth check
-  const res = NextResponse.next()
   const supabaseAuth = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -33,7 +31,6 @@ export async function GET(req: NextRequest) {
   const { data: { user } } = await supabaseAuth.auth.getUser()
   if (!user) return NextResponse.redirect(`${APP_URL}/login`)
 
-  // Get user's connected store
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -50,7 +47,6 @@ export async function GET(req: NextRequest) {
 
   const plan = PLANS[planId]
 
-  // Create recurring charge via Shopify Admin API
   const chargeRes = await fetch(
     `https://${store.shop_domain}/admin/api/2024-01/recurring_application_charges.json`,
     {
@@ -64,17 +60,20 @@ export async function GET(req: NextRequest) {
           name: plan.name,
           price: plan.price.toFixed(2),
           return_url: `${APP_URL}/api/shopify/billing/callback?plan=${planId}&shop=${store.shop_domain}`,
-          test: true, // Remove in production
+          test: true,
           trial_days: 0,
         },
       }),
     }
   )
 
-  const { recurring_application_charge: charge } = await chargeRes.json()
+  const chargeJson = await chargeRes.json()
+  const charge = chargeJson.recurring_application_charge
 
   if (!charge?.confirmation_url) {
-    return NextResponse.redirect(`${APP_URL}/dashboard/billing?error=charge_failed`)
+    console.error('Shopify billing create failed:', JSON.stringify(chargeJson))
+    const errMsg = chargeJson.errors ? encodeURIComponent(JSON.stringify(chargeJson.errors)) : 'charge_failed'
+    return NextResponse.redirect(`${APP_URL}/dashboard/billing?error=${errMsg}`)
   }
 
   return NextResponse.redirect(charge.confirmation_url)
