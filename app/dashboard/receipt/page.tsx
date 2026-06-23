@@ -155,6 +155,10 @@ export default function ReceiptSettings() {
     pinterest_url: '',
     youtube_url: '',
     linkedin_url: '',
+    custom_links: [] as Array<{label: string, url: string}>,
+    recivo_link_hidden: false,
+    recivo_link_url: 'https://tryrecivo.com',
+    recivo_link_label: 'Powered by tryrecivo',
   })
   const router = useRouter()
   const supabase = createClient()
@@ -172,9 +176,16 @@ export default function ReceiptSettings() {
         setStore(stores[0])
         const { data: existing } = await supabase.from('receipt_settings').select('*').eq('store_id', stores[0].id).single()
         if (existing) {
-          // Normalize old style names (bold → basic, minimal → modern)
           const normalizedStyle = normalizeStyle(existing.receipt_style)
-          setSettings(s => ({ ...s, ...existing, receipt_style: normalizedStyle }))
+          // Parse custom_links from jsonb/string
+          let parsedLinks: Array<{label: string, url: string}> = []
+          if (existing.custom_links) {
+            if (Array.isArray(existing.custom_links)) parsedLinks = existing.custom_links
+            else if (typeof existing.custom_links === 'string') {
+              try { parsedLinks = JSON.parse(existing.custom_links) } catch {}
+            }
+          }
+          setSettings(s => ({ ...s, ...existing, receipt_style: normalizedStyle, custom_links: parsedLinks }))
         }
       }
       setLoading(false)
@@ -185,7 +196,13 @@ export default function ReceiptSettings() {
   const handleSave = async () => {
     if (!store) return
     setSaving(true)
-    await supabase.from('receipt_settings').upsert({ ...settings, store_id: store.id })
+    const payload: any = { ...settings, store_id: store.id }
+    const { error } = await supabase.from('receipt_settings').upsert(payload)
+    if (error) {
+      // Columns may not exist yet — fall back to core fields only
+      const { custom_links, recivo_link_hidden, recivo_link_url, recivo_link_label, ...coreSettings } = payload
+      await supabase.from('receipt_settings').upsert(coreSettings)
+    }
     setSaving(false)
     setSaved(true)
     setTimeout(() => setSaved(false), 3000)
@@ -308,7 +325,7 @@ export default function ReceiptSettings() {
             </div>
           </div>
 
-          {/* ── Brand Color ───────────────────────────────────────────────────── */}
+          {/* ── Brand Color ───────────────────────────────────────────────────── */}─────────────────────────────── */}
           <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
             <h2 className="font-bold mb-4" style={{ color: '#1a2f5e' }}>Branding</h2>
             <label className="block text-sm font-medium text-gray-700 mb-2">Brand color</label>
@@ -352,7 +369,49 @@ export default function ReceiptSettings() {
                 <p className="text-xs text-gray-400 mt-2">Upgrade to Starter to add your logo.</p>
               )}
             </div>
+
+            {/* tryrecivo attribution link */}
+            <div className="mt-5 pt-5 border-t border-gray-100">
+              <div className="flex items-center justify-between mb-1">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">tryrecivo.com link in receipt</label>
+                  <p className="text-xs text-gray-400 mt-0.5">Small attribution link in the receipt footer</p>
+                </div>
+                {userPlan === 'free' ? (
+                  <span className="text-xs text-gray-400 flex items-center gap-1">🔒 Locked on</span>
+                ) : (
+                  <div
+                    className={`w-10 h-6 rounded-full transition-colors relative cursor-pointer flex-shrink-0 ${!settings.recivo_link_hidden ? 'bg-[#00bfa5]' : 'bg-gray-200'}`}
+                    onClick={() => setSettings(s => ({ ...s, recivo_link_hidden: !s.recivo_link_hidden }))}
+                  >
+                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${!settings.recivo_link_hidden ? 'left-5' : 'left-1'}`} />
+                  </div>
+                )}
+              </div>
+              {userPlan === 'free' && (
+                <p className="text-xs text-gray-400 mt-2">Upgrade to hide or customize this link.</p>
+              )}
+              {userPlan !== 'free' && !settings.recivo_link_hidden && (
+                <div className="space-y-2 mt-3">
+                  <input
+                    type="text"
+                    value={settings.recivo_link_label}
+                    onChange={e => setSettings(s => ({ ...s, recivo_link_label: e.target.value }))}
+                    placeholder="Powered by tryrecivo"
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#00bfa5]"
+                  />
+                  <input
+                    type="url"
+                    value={settings.recivo_link_url}
+                    onChange={e => setSettings(s => ({ ...s, recivo_link_url: e.target.value }))}
+                    placeholder="https://tryrecivo.com"
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#00bfa5]"
+                  />
+                </div>
+              )}
+            </div>
           </div>
+
 
           {/* ── Messages ──────────────────────────────────────────────────────── */}
           <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
@@ -431,7 +490,63 @@ export default function ReceiptSettings() {
             </div>
           </div>
 
-          {/* ── Display Options ───────────────────────────────────────────────── */}
+          {/* ── Custom Links ──────────────────────────────────────────────────── */}
+          <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="font-bold" style={{ color: '#1a2f5e' }}>Custom links</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Add clickable links in the receipt (e.g. Track order, Shop again)</p>
+              </div>
+              <button
+                onClick={() => setSettings(s => ({ ...s, custom_links: [...(s.custom_links as any[] || []), { label: '', url: '' }] }))}
+                className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#00bfa5] text-[#00bfa5] hover:bg-[#e0f7f4] transition-colors flex-shrink-0"
+              >
+                + Add link
+              </button>
+            </div>
+            {(settings.custom_links as any[]).length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-3">No custom links yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {(settings.custom_links as any[]).map((link: any, idx: number) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={link.label}
+                      onChange={e => {
+                        const updated = [...(settings.custom_links as any[])]
+                        updated[idx] = { ...updated[idx], label: e.target.value }
+                        setSettings(s => ({ ...s, custom_links: updated }))
+                      }}
+                      placeholder="Label (e.g. Track Order)"
+                      className="w-2/5 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#00bfa5]"
+                    />
+                    <input
+                      type="url"
+                      value={link.url}
+                      onChange={e => {
+                        const updated = [...(settings.custom_links as any[])]
+                        updated[idx] = { ...updated[idx], url: e.target.value }
+                        setSettings(s => ({ ...s, custom_links: updated }))
+                      }}
+                      placeholder="https://..."
+                      className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#00bfa5]"
+                    />
+                    <button
+                      onClick={() => {
+                        const updated = (settings.custom_links as any[]).filter((_: any, i: number) => i !== idx)
+                        setSettings(s => ({ ...s, custom_links: updated }))
+                      }}
+                      className="text-red-400 hover:text-red-600 text-base px-1 flex-shrink-0"
+                      title="Remove"
+                    >🗑</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ── Display Options ─────────────────────────────────────────────────── */}
           <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
             <h2 className="font-bold mb-4" style={{ color: '#1a2f5e' }}>Display options</h2>
             <div className="space-y-3">
