@@ -75,7 +75,7 @@ export async function GET(req: NextRequest) {
   }
 
   const gqlRes = await fetch(
-    `https://${store.shop_domain}/admin/api/2024-01/graphql.json`,
+    `https://${store.shop_domain}/admin/api/2026-04/graphql.json`,
     {
       method: 'POST',
       headers: {
