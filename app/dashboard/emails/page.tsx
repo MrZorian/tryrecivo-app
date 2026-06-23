@@ -28,13 +28,19 @@ export default function EmailLogs() {
   return (
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white border-b border-gray-100 px-6 py-4 flex items-center gap-3">
-        <Link href="/dashboard" className="text-gray-400 hover:text-gray-600 text-sm">← Dashboard</Link>
+        <Link href="/dashboard" className="flex items-center gap-2 hover:opacity-80 transition-opacity mr-1">
+          <div className="w-6 h-6 rounded flex items-center justify-center" style={{background:'#1a2f5e'}}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="13" rx="2" stroke="#00bfa5" strokeWidth="2"/><polyline points="3,5 12,12 21,5" stroke="#00bfa5" strokeWidth="2" strokeLinejoin="round"/></svg>
+          </div>
+          <span className="font-bold text-sm" style={{color:'#1a2f5e'}}>tryrecivo</span>
+        </Link>
         <span className="text-gray-300">/</span>
         <span className="font-semibold text-sm" style={{color:'#1a2f5e'}}>Email Logs</span>
       </nav>
 
       <div className="max-w-4xl mx-auto px-6 py-8">
         <h1 className="text-2xl font-bold mb-6" style={{color:'#1a2f5e'}}>Email logs</h1>
+
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100">
             <p className="text-sm text-gray-500">{logs.length} receipts sent</p>
