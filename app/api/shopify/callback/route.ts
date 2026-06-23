@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
   if (!access_token) return NextResponse.redirect(`${APP_URL}/dashboard?error=no_token`)
 
   // Get shop info from Shopify
-  const shopRes = await fetch(`https://${shop}/admin/api/2024-01/shop.json`, {
+  const shopRes = await fetch(`https://${shop}/admin/api/2026-04/shop.json`, {
     headers: { 'X-Shopify-Access-Token': access_token },
   })
   const { shop: shopData } = await shopRes.json()
@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
   }, { onConflict: 'shop_domain' })
 
   // Register orders/paid webhook
-  await fetch(`https://${shop}/admin/api/2024-01/webhooks.json`, {
+  await fetch(`https://${shop}/admin/api/2026-04/webhooks.json`, {
     method: 'POST',
     headers: {
       'X-Shopify-Access-Token': access_token,
