@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 const PLANS: Record<string, { name: string; price: number; emails: number }> = {
   starter: { name: 'Recivo Starter', price: 19, emails: 5000 },
   growth:  { name: 'Recivo Growth',  price: 49, emails: 20000 },
-  pro:     { name: 'Recivo Pro',     price: 99, emails: 0 },
+  pro:     { name: 'Recivo Pro',     price: 99, emails: 0 }, // 0 = unlimited
 }
 
 export async function GET(req: NextRequest) {
@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${APP_URL}/dashboard/billing?error=invalid_plan`)
   }
 
+  // Auth check
   const supabaseAuth = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -31,6 +32,7 @@ export async function GET(req: NextRequest) {
   const { data: { user } } = await supabaseAuth.auth.getUser()
   if (!user) return NextResponse.redirect(`${APP_URL}/login`)
 
+  // Get user's connected store
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -47,34 +49,54 @@ export async function GET(req: NextRequest) {
 
   const plan = PLANS[planId]
 
-  const chargeRes = await fetch(
-    `https://${store.shop_domain}/admin/api/2024-01/recurring_application_charges.json`,
+  // Create subscription via Shopify GraphQL Billing API
+  const returnUrl = `${APP_URL}/api/shopify/billing/callback?plan=${planId}&shop=${store.shop_domain}`
+  const mutation = `
+    mutation appSubscriptionCreate($name: String!, $returnUrl: URL!, $test: Boolean!, $lineItems: [AppSubscriptionLineItemInput!]!) {
+      appSubscriptionCreate(name: $name, returnUrl: $returnUrl, test: $test, lineItems: $lineItems) {
+        appSubscription { id }
+        confirmationUrl
+        userErrors { field message }
+      }
+    }
+  `
+  const variables = {
+    name: plan.name,
+    returnUrl,
+    test: true,
+    lineItems: [{
+      plan: {
+        appRecurringPricingDetails: {
+          price: { amount: plan.price.toFixed(2), currencyCode: 'USD' },
+          interval: 'EVERY_30_DAYS',
+        },
+      },
+    }],
+  }
+
+  const gqlRes = await fetch(
+    `https://${store.shop_domain}/admin/api/2024-01/graphql.json`,
     {
       method: 'POST',
       headers: {
         'X-Shopify-Access-Token': store.access_token,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        recurring_application_charge: {
-          name: plan.name,
-          price: plan.price.toFixed(2),
-          return_url: `${APP_URL}/api/shopify/billing/callback?plan=${planId}&shop=${store.shop_domain}`,
-          test: true,
-          trial_days: 0,
-        },
-      }),
+      body: JSON.stringify({ query: mutation, variables }),
     }
   )
 
-  const chargeJson = await chargeRes.json()
-  const charge = chargeJson.recurring_application_charge
+  const gqlJson = await gqlRes.json()
+  const result = gqlJson?.data?.appSubscriptionCreate
+  const confirmationUrl = result?.confirmationUrl
 
-  if (!charge?.confirmation_url) {
-    console.error('Shopify billing create failed:', JSON.stringify(chargeJson))
-    const errMsg = chargeJson.errors ? encodeURIComponent(JSON.stringify(chargeJson.errors)) : 'charge_failed'
-    return NextResponse.redirect(`${APP_URL}/dashboard/billing?error=${errMsg}`)
+  if (!confirmationUrl) {
+    const errors = result?.userErrors?.length
+      ? JSON.stringify(result.userErrors)
+      : JSON.stringify(gqlJson?.errors || gqlJson)
+    console.error('Shopify billing create failed:', errors)
+    return NextResponse.redirect(`${APP_URL}/dashboard/billing?error=${encodeURIComponent(errors)}`)
   }
 
-  return NextResponse.redirect(charge.confirmation_url)
+  return NextResponse.redirect(confirmationUrl)
 }
