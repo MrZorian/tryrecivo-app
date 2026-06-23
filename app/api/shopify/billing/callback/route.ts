@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
   // charge_id from Shopify can be numeric -- build GID if needed
   const gid = chargeId && chargeId.startsWith('gid://') ? chargeId : `gid://shopify/AppSubscription/${chargeId}`
 
-  const verifyRes = await fetch(`https://${shop}/admin/api/2024-01/graphql.json`, {
+  const verifyRes = await fetch(`https://${shop}/admin/api/2026-04/graphql.json`, {
     method: 'POST',
     headers: { 'X-Shopify-Access-Token': store.access_token, 'Content-Type': 'application/json' },
     body: JSON.stringify({ query, variables: { id: gid } }),
@@ -86,7 +86,7 @@ export async function GET(req: NextRequest) {
       }
     }
   `
-  await fetch(`https://${shop}/admin/api/2024-01/graphql.json`, {
+  await fetch(`https://${shop}/admin/api/2026-04/graphql.json`, {
     method: 'POST',
     headers: { 'X-Shopify-Access-Token': store.access_token, 'Content-Type': 'application/json' },
     body: JSON.stringify({ query: activateMutation, variables: { id: gid } }),
