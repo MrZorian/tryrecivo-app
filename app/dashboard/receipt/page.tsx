@@ -50,7 +50,7 @@ const STYLES = [
     name: 'Modern',
     desc: 'Clean serif typography',
     minPlan: 'starter',
-    preview: () => (
+    preview: (_color?: string) => (
       <div style={{ background: 'white', borderRadius: 8, padding: 12, fontFamily: 'Georgia,serif', fontSize: 10 }}>
         <div style={{ borderBottom: '2px solid #111', paddingBottom: 8, marginBottom: 8 }}>
           <div style={{ fontSize: 9, letterSpacing: 2, textTransform: 'uppercase', color: '#888' }}>Store Name</div>
@@ -101,7 +101,7 @@ const STYLES = [
     name: 'Luxury',
     desc: 'Dark elegant with gold accents',
     minPlan: 'growth',
-    preview: () => (
+    preview: (_color?: string) => (
       <div style={{ background: '#1a1a1a', borderRadius: 8, padding: 10, fontFamily: 'Georgia,serif', fontSize: 10 }}>
         <div style={{ borderBottom: '2px solid #c9a84c', paddingBottom: 8, marginBottom: 10, textAlign: 'center' }}>
           <div style={{ fontSize: 9, letterSpacing: 3, textTransform: 'uppercase', color: '#c9a84c', marginBottom: 3 }}>Store Name</div>
@@ -245,11 +245,8 @@ export default function ReceiptSettings() {
       {/* Nav */}
       <nav className="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between sticky top-0 z-20">
         <div className="flex items-center gap-3">
-          <Link href="/dashboard" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <div className="w-6 h-6 rounded flex items-center justify-center" style={{background:'#1a2f5e'}}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="13" rx="2" stroke="#00bfa5" strokeWidth="2"/><polyline points="3,5 12,12 21,5" stroke="#00bfa5" strokeWidth="2" strokeLinejoin="round"/></svg>
-            </div>
-            <span className="font-bold text-sm" style={{color:'#1a2f5e'}}>tryrecivo</span>
+          <Link href="/dashboard" className="flex items-center hover:opacity-80 transition-opacity">
+            <img src="/logo.png" alt="tryrecivo" width="120" />
           </Link>
           <span className="text-gray-300">/</span>
           <span className="font-semibold text-sm" style={{ color: '#1a2f5e' }}>Receipt Settings</span>
