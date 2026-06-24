@@ -17,11 +17,8 @@ export default function ConnectStore() {
   return (
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white border-b border-gray-100 px-6 py-4 flex items-center gap-3">
-        <Link href="/dashboard" className="flex items-center gap-2 hover:opacity-80 transition-opacity mr-1">
-          <div className="w-6 h-6 rounded flex items-center justify-center" style={{background:'#1a2f5e'}}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="13" rx="2" stroke="#00bfa5" strokeWidth="2"/><polyline points="3,5 12,12 21,5" stroke="#00bfa5" strokeWidth="2" strokeLinejoin="round"/></svg>
-          </div>
-          <span className="font-bold text-sm" style={{color:'#1a2f5e'}}>tryrecivo</span>
+        <Link href="/dashboard" className="flex items-center hover:opacity-80 transition-opacity mr-1">
+          <img src="/logo.png" alt="tryrecivo" width="120" />
         </Link>
         <span className="text-gray-300">/</span>
         <span className="font-semibold text-sm" style={{color:'#1a2f5e'}}>Connect Store</span>
