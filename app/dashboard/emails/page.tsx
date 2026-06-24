@@ -29,7 +29,7 @@ export default function EmailLogs() {
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white border-b border-gray-100 px-6 py-4 flex items-center gap-3">
         <Link href="/dashboard" className="flex items-center hover:opacity-80 transition-opacity mr-1">
-          <img src="/logo.png" alt="tryrecivo" width="120" />
+          <img src="/logo.png" alt="tryrecivo" width={120} />
         </Link>
         <span className="text-gray-300">/</span>
         <span className="font-semibold text-sm" style={{color:'#1a2f5e'}}>Email Logs</span>
