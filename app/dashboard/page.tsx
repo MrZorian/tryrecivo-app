@@ -63,7 +63,7 @@ export default function Dashboard() {
       {/* Navbar */}
       <nav className="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
         <Link href="/dashboard" className="flex items-center hover:opacity-80 transition-opacity">
-          <img src="/logo.png" alt="tryrecivo" width="120" />
+          <img src="/logo.png" alt="tryrecivo" width={120} />
         </Link>
         <div className="flex items-center gap-4">
           <span className="text-sm text-gray-500">{user?.email}</span>
