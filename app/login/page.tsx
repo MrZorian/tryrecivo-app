@@ -31,7 +31,7 @@ export default function LoginPage() {
       <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center justify-center hover:opacity-80 transition-opacity mb-2">
-            <img src="/logo.png" alt="tryrecivo" width="120" />
+            <img src="/logo.png" alt="tryrecivo" width={120} />
           </Link>
           <h1 className="text-2xl font-bold mt-2" style={{color:'#1a2f5e'}}>Welcome back</h1>
           <p className="text-gray-500 text-sm mt-1">Sign in to your Recivo account</p>
