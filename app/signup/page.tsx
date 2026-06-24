@@ -57,16 +57,8 @@ export default function SignupPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md">
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex flex-col items-center hover:opacity-80 transition-opacity mb-2">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl mb-2" style={{background:'#1a2f5e'}}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <rect x="3" y="5" width="18" height="13" rx="2" stroke="#00bfa5" strokeWidth="1.8"/>
-                <polyline points="3,5 12,12 21,5" stroke="#00bfa5" strokeWidth="1.8" strokeLinejoin="round"/>
-                <circle cx="19" cy="15" r="3.5" fill="#00bfa5"/>
-                <polyline points="17,15 18.5,16.5 21,13.5" stroke="white" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <span className="font-bold text-lg" style={{color:'#1a2f5e'}}>tryrecivo</span>
+          <Link href="/" className="inline-flex items-center justify-center hover:opacity-80 transition-opacity mb-2">
+            <img src="/logo.png" alt="tryrecivo" width="120" />
           </Link>
           <h1 className="text-2xl font-bold mt-2" style={{color:'#1a2f5e'}}>Create your account</h1>
           <p className="text-gray-500 text-sm mt-1">Start sending branded receipts in 2 minutes</p>
