@@ -19,7 +19,7 @@ export default function SignupPage() {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const { data, error: signupError } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name }, emailRedirectTo: window.location.origin + '/dashboard' } })
+        const { data, error: signupError } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name }, emailRedirectTo: (process.env.NEXT_PUBLIC_APP_URL || 'https://app.tryrecivo.com') + '/dashboard' } })
     if (signupError) { setError(signupError.message); setLoading(false); return }
     try { await fetch('/api/auth/welcome', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, name }) }) } catch (_) {}
     if (!data.session) { router.push('/verify-email?email=' + encodeURIComponent(email)) } else { router.push('/dashboard') }
