@@ -75,13 +75,11 @@ function BillingContent() {
   const [hasStore, setHasStore] = useState(false)
   const [loading, setLoading] = useState(true)
   const [upgrading, setUpgrading] = useState<string | null>(null)
-  const [payMethod, setPayMethod] = useState<'shopify' | 'card'>('shopify')
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
 
   const upgraded = searchParams.get('upgraded')
-  const source   = searchParams.get('source')
   const error    = searchParams.get('error')
 
   useEffect(() => {
@@ -109,12 +107,8 @@ function BillingContent() {
 
   const handleUpgrade = (planId: string) => {
     setUpgrading(planId)
-    if (payMethod === 'card') {
-      window.location.href = `/api/stripe/checkout?plan=${planId}`
-    } else {
-      if (!hasStore) { router.push('/dashboard/connect'); return }
-      window.location.href = `/api/shopify/billing/create?plan=${planId}`
-    }
+    if (!hasStore) { router.push('/dashboard/connect'); return }
+    window.location.href = `/api/shopify/billing/create?plan=${planId}`
   }
 
   if (loading) return (
@@ -141,10 +135,7 @@ function BillingContent() {
             <span className="text-2xl">🎉</span>
             <div>
               <p className="font-semibold text-emerald-800">Plan upgraded successfully!</p>
-              <p className="text-sm text-emerald-600">
-                Your new limits are active immediately.
-                {source === 'stripe' && ' Billed via credit card.'}
-              </p>
+              <p className="text-sm text-emerald-600">Your new limits are active immediately.</p>
             </div>
           </div>
         )}
@@ -158,12 +149,11 @@ function BillingContent() {
           </div>
         )}
 
-        {/* Shopify store warning (only for Shopify billing) */}
-        {!hasStore && payMethod === 'shopify' && (
+        {/* Shopify store required warning */}
+        {!hasStore && (
           <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
             ⚠️ Shopify billing requires a connected store.{' '}
-            <Link href="/dashboard/connect" className="font-semibold underline">Connect now</Link>{' '}
-            or switch to <button className="font-semibold underline" onClick={() => setPayMethod('card')}>credit card</button>.
+            <Link href="/dashboard/connect" className="font-semibold underline">Connect your store first</Link>.
           </div>
         )}
 
@@ -186,41 +176,10 @@ function BillingContent() {
           </div>
         </div>
 
-        <div className="text-center mb-6">
+        <div className="text-center mb-8">
           <h1 className="text-3xl font-bold mb-2" style={{ color: '#1a2f5e' }}>Choose your plan</h1>
-          <p className="text-gray-500 text-sm">Cancel anytime.</p>
+          <p className="text-gray-500 text-sm">Billed through Shopify. Cancel anytime from your Shopify admin.</p>
         </div>
-
-        {/* Payment method toggle */}
-        <div className="flex justify-center mb-8">
-          <div className="inline-flex bg-white border border-gray-200 rounded-xl p-1 gap-1">
-            <button
-              onClick={() => setPayMethod('shopify')}
-              className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${payMethod === 'shopify' ? 'text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-              style={payMethod === 'shopify' ? { background: '#1a2f5e' } : {}}
-            >
-              🛍 Pay via Shopify
-            </button>
-            <button
-              onClick={() => setPayMethod('card')}
-              className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${payMethod === 'card' ? 'text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-              style={payMethod === 'card' ? { background: '#1a2f5e' } : {}}
-            >
-              💳 Pay by card
-            </button>
-          </div>
-        </div>
-
-        {payMethod === 'shopify' && (
-          <p className="text-center text-xs text-gray-400 mb-6">
-            Charged through your Shopify account. Manage in your Shopify admin.
-          </p>
-        )}
-        {payMethod === 'card' && (
-          <p className="text-center text-xs text-gray-400 mb-6">
-            Secure checkout via Stripe. No Shopify store required.
-          </p>
-        )}
 
         {/* Plan cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
@@ -282,9 +241,7 @@ function BillingContent() {
                       : { background: 'transparent', color: '#1a2f5e', border: '1.5px solid #1a2f5e', opacity: upgrading === plan.id ? 0.6 : 1 }
                     }
                   >
-                    {upgrading === plan.id
-                      ? 'Redirecting...'
-                      : isHigher ? `Upgrade ${payMethod === 'card' ? '💳' : '🛍'}` : 'Downgrade'}
+                    {upgrading === plan.id ? 'Redirecting...' : isHigher ? 'Upgrade via Shopify 🛍' : 'Downgrade'}
                   </button>
                 )}
               </div>
@@ -293,9 +250,7 @@ function BillingContent() {
         </div>
 
         <p className="text-center text-xs text-gray-400 mt-8">
-          {payMethod === 'shopify'
-            ? 'Billed via Shopify. Cancel anytime from your Shopify admin.'
-            : 'Billed via Stripe. Secure card processing. Cancel anytime.'}
+          Billed via Shopify. Manage or cancel anytime from your Shopify admin.
         </p>
       </div>
     </div>
