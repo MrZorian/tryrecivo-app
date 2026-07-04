@@ -106,8 +106,8 @@ function BillingContent() {
   }, [])
 
   const handleUpgrade = (planId: string) => {
-    setUpgrading(planId)
     if (!hasStore) { router.push('/dashboard/connect'); return }
+    setUpgrading(planId)
     window.location.href = `/api/shopify/billing/create?plan=${planId}`
   }
 
@@ -129,18 +129,16 @@ function BillingContent() {
 
       <div className="max-w-5xl mx-auto px-6 py-8">
 
-        {/* Success banner */}
         {upgraded && (
           <div className="mb-6 bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center gap-3">
             <span className="text-2xl">🎉</span>
             <div>
               <p className="font-semibold text-emerald-800">Plan upgraded successfully!</p>
-              <p className="text-sm text-emerald-600">Your new limits are active immediately.</p>
+              <p className="text-sm text-emerald-600">Your new limits are active immediately. Billed via Shopify.</p>
             </div>
           </div>
         )}
 
-        {/* Error banner */}
         {error && (
           <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">
             {error === 'charge_declined'
@@ -149,15 +147,13 @@ function BillingContent() {
           </div>
         )}
 
-        {/* Shopify store required warning */}
         {!hasStore && (
           <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
-            ⚠️ Shopify billing requires a connected store.{' '}
-            <Link href="/dashboard/connect" className="font-semibold underline">Connect your store first</Link>.
+            ⚠️ You need a connected Shopify store to upgrade.{' '}
+            <Link href="/dashboard/connect" className="font-semibold underline">Connect your store →</Link>
           </div>
         )}
 
-        {/* Usage bar */}
         <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm mb-8">
           <div className="flex items-center justify-between mb-2">
             <div>
@@ -169,78 +165,45 @@ function BillingContent() {
             </span>
           </div>
           <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all"
-              style={{ width: `${Math.min(100, (emailsUsed / Math.max(emailsLimit, 1)) * 100)}%`, background: '#00bfa5' }}
-            />
+            <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(100, (emailsUsed / Math.max(emailsLimit, 1)) * 100)}%`, background: '#00bfa5' }} />
           </div>
         </div>
 
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold mb-2" style={{ color: '#1a2f5e' }}>Choose your plan</h1>
-          <p className="text-gray-500 text-sm">Billed through Shopify. Cancel anytime from your Shopify admin.</p>
+          <p className="text-gray-500 text-sm">Billed securely through Shopify. Cancel anytime from your Shopify admin.</p>
         </div>
 
-        {/* Plan cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
           {plans.map(plan => {
             const isCurrent = currentPlan === plan.id
             const isHigher  = plans.findIndex(p => p.id === plan.id) > plans.findIndex(p => p.id === currentPlan)
-
             return (
-              <div
-                key={plan.id}
-                className={`bg-white rounded-xl p-6 border shadow-sm relative flex flex-col ${plan.popular ? 'border-2' : 'border-gray-100'}`}
-                style={plan.popular ? { borderColor: '#1a2f5e' } : {}}
-              >
+              <div key={plan.id} className={`bg-white rounded-xl p-6 border shadow-sm relative flex flex-col ${plan.popular ? 'border-2' : 'border-gray-100'}`} style={plan.popular ? { borderColor: '#1a2f5e' } : {}}>
                 {plan.popular && !isCurrent && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-bold text-white whitespace-nowrap" style={{ background: '#1a2f5e' }}>
-                    MOST POPULAR
-                  </div>
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-bold text-white whitespace-nowrap" style={{ background: '#1a2f5e' }}>MOST POPULAR</div>
                 )}
                 {isCurrent && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-bold text-white whitespace-nowrap" style={{ background: '#00bfa5' }}>
-                    CURRENT PLAN
-                  </div>
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-bold text-white whitespace-nowrap" style={{ background: '#00bfa5' }}>CURRENT PLAN</div>
                 )}
-
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">{plan.name}</p>
-                <p className="text-3xl font-bold mb-1" style={{ color: '#1a2f5e' }}>
-                  ${plan.price}<span className="text-base font-normal text-gray-400">/mo</span>
-                </p>
+                <p className="text-3xl font-bold mb-1" style={{ color: '#1a2f5e' }}>${plan.price}<span className="text-base font-normal text-gray-400">/mo</span></p>
                 <p className="text-xs font-semibold mb-5" style={{ color: '#00bfa5' }}>{plan.emails} emails/mo</p>
-
                 <ul className="space-y-2 mb-6 flex-1">
                   {plan.features.map(f => (
-                    <li key={f} className="flex items-start gap-2 text-sm text-gray-700">
-                      <span style={{ color: '#00bfa5' }}>✓</span> {f}
-                    </li>
+                    <li key={f} className="flex items-start gap-2 text-sm text-gray-700"><span style={{ color: '#00bfa5' }}>✓</span> {f}</li>
                   ))}
                   {plan.locked.map(f => (
-                    <li key={f} className="flex items-start gap-2 text-sm text-gray-300">
-                      <span>✗</span> {f}
-                    </li>
+                    <li key={f} className="flex items-start gap-2 text-sm text-gray-300"><span>✗</span> {f}</li>
                   ))}
                 </ul>
-
                 {isCurrent ? (
-                  <button disabled className="w-full py-2.5 rounded-lg text-sm font-semibold bg-gray-100 text-gray-400 cursor-default">
-                    Current plan
-                  </button>
+                  <button disabled className="w-full py-2.5 rounded-lg text-sm font-semibold bg-gray-100 text-gray-400 cursor-default">Current plan</button>
                 ) : plan.price === 0 ? (
-                  <button disabled className="w-full py-2.5 rounded-lg text-sm font-semibold bg-gray-50 text-gray-400 cursor-default border border-gray-200">
-                    Free
-                  </button>
+                  <button disabled className="w-full py-2.5 rounded-lg text-sm font-semibold bg-gray-50 text-gray-400 cursor-default border border-gray-200">Free</button>
                 ) : (
-                  <button
-                    onClick={() => handleUpgrade(plan.id)}
-                    disabled={upgrading === plan.id}
-                    className="w-full py-2.5 rounded-lg text-sm font-semibold transition-all"
-                    style={plan.popular
-                      ? { background: upgrading === plan.id ? '#94a3b8' : '#1a2f5e', color: 'white' }
-                      : { background: 'transparent', color: '#1a2f5e', border: '1.5px solid #1a2f5e', opacity: upgrading === plan.id ? 0.6 : 1 }
-                    }
-                  >
+                  <button onClick={() => handleUpgrade(plan.id)} disabled={upgrading === plan.id} className="w-full py-2.5 rounded-lg text-sm font-semibold transition-all"
+                    style={plan.popular ? { background: upgrading === plan.id ? '#94a3b8' : '#1a2f5e', color: 'white' } : { background: 'transparent', color: '#1a2f5e', border: '1.5px solid #1a2f5e', opacity: upgrading === plan.id ? 0.6 : 1 }}>
                     {upgrading === plan.id ? 'Redirecting...' : isHigher ? 'Upgrade via Shopify 🛍' : 'Downgrade'}
                   </button>
                 )}
@@ -249,9 +212,7 @@ function BillingContent() {
           })}
         </div>
 
-        <p className="text-center text-xs text-gray-400 mt-8">
-          Billed via Shopify. Manage or cancel anytime from your Shopify admin.
-        </p>
+        <p className="text-center text-xs text-gray-400 mt-8">Billed via Shopify. Cancel anytime from your Shopify admin.</p>
       </div>
     </div>
   )
