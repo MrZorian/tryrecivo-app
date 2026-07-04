@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
   const variables = {
     name: plan.name,
     returnUrl,
-    test: true,
+    test: false,
     lineItems: [{
       plan: {
         appRecurringPricingDetails: {
