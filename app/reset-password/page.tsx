@@ -1,6 +1,7 @@
 'use client'
 export const dynamic = 'force-dynamic'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -10,9 +11,24 @@ export default function ResetPasswordPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [confirm, setConfirm] = useState('')
   const [loading, setLoading] = useState(false)
+  const [verifying, setVerifying] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
+
+  // Exchange token_hash from recovery email link for a session
+  useEffect(() => {
+    const token_hash = searchParams.get('token_hash')
+    const type = searchParams.get('type')
+    if (token_hash && type === 'recovery') {
+      setVerifying(true)
+      supabase.auth.verifyOtp({ token_hash, type: 'recovery' }).then(({ error }) => {
+        setVerifying(false)
+        if (error) setError('Recovery link is invalid or expired. Please request a new one.')
+      })
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -36,10 +52,12 @@ export default function ResetPasswordPage() {
             <img src="/logo.png" alt="tryrecivo" width={120} />
           </Link>
           <h1 className="text-2xl font-bold mt-2" style={{color:'#1a2f5e'}}>Set new password</h1>
-          <p className="text-gray-500 text-sm mt-1">Choose a strong password for your account</p>
+          <p className="text-gray-500 text-sm mt-1">
+            {verifying ? 'Verifying recovery link…' : 'Choose a strong password for your account'}
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" style={{opacity: verifying ? 0.5 : 1, pointerEvents: verifying ? 'none' : 'auto'}}>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">New password</label>
             <div className="relative">
