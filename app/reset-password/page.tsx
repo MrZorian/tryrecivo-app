@@ -1,12 +1,12 @@
 'use client'
 export const dynamic = 'force-dynamic'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [confirm, setConfirm] = useState('')
@@ -117,5 +117,13 @@ export default function ResetPasswordPage() {
         </form>
       </div>
     </div>
+  )
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="text-gray-500">Loading…</div></div>}>
+      <ResetPasswordContent />
+    </Suspense>
   )
 }
