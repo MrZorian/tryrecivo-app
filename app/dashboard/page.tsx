@@ -88,11 +88,11 @@ export default function Dashboard() {
               <div className="h-full rounded-full transition-all" style={{width:`${usagePercent}%`, background:'#00bfa5'}}></div>
             </div>
           </div>
-          <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+          <Link href="/dashboard/stores" className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-shadow block">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Stores connected</p>
             <p className="text-3xl font-bold" style={{color:'#1a2f5e'}}>{stores.length}</p>
-            <p className="text-xs text-gray-400 mt-1">Shopify stores</p>
-          </div>
+            <p className="text-xs mt-1 font-semibold" style={{color:'#00bfa5'}}>Manage stores →</p>
+          </Link>
           <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Current plan</p>
             <p className="text-3xl font-bold capitalize" style={{color:'#1a2f5e'}}>{profile?.plan || 'Free'}</p>
@@ -153,7 +153,7 @@ export default function Dashboard() {
           {[
             { href: '/dashboard/receipt', label: 'Receipt Settings', icon: '✏️' },
             { href: '/dashboard/emails', label: 'Email Logs', icon: '📧' },
-            { href: '/dashboard/connect', label: 'Connect Store', icon: '🔗' },
+            { href: '/dashboard/stores', label: 'Manage Stores', icon: '🏪' },
             { href: '/dashboard/billing', label: 'Billing', icon: '💳' },
           ].map(item => (
             <Link key={item.href} href={item.href} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow text-center">
