@@ -11,14 +11,22 @@ const PLAN_LIMITS: Record<string, { emails_limit: number }> = {
 export async function GET(req: NextRequest) {
   const APP_URL = process.env.NEXT_PUBLIC_APP_URL!
   const { searchParams } = req.nextUrl
-  const chargeId = searchParams.get('charge_id')
-  const planId = searchParams.get('plan')
+
+  // Shopify App Pricing sends: plan_handle, shop
+  // Legacy Billing API sent: plan, shop, charge_id
+  const planHandle = searchParams.get('plan_handle') || searchParams.get('plan')
   const shop = searchParams.get('shop')
 
-  if (!planId || !shop) {
+  if (!planHandle || !shop) {
     return NextResponse.redirect(`${APP_URL}/dashboard/billing?error=missing_params`)
   }
 
+  const planId = planHandle.toLowerCase() // 'starter' | 'growth' | 'pro'
+  if (!PLAN_LIMITS[planId]) {
+    return NextResponse.redirect(`${APP_URL}/dashboard/billing?error=unknown_plan`)
+  }
+
+  // Auth check
   const supabaseAuth = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -37,63 +45,27 @@ export async function GET(req: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
+
+  // Verify the store belongs to this user
   const { data: store } = await supabase
     .from('stores')
-    .select('access_token')
+    .select('id')
     .eq('shop_domain', shop)
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   if (!store) {
     return NextResponse.redirect(`${APP_URL}/dashboard/billing?error=store_not_found`)
   }
 
-  const query = `
-    query getSubscription($id: ID!) {
-      node(id: $id) {
-        ... on AppSubscription { id status }
-      }
-    }
-  `
-  const gid = chargeId && chargeId.startsWith('gid://') ? chargeId : `gid://shopify/AppSubscription/${chargeId}`
-
-  const verifyRes = await fetch(`https://${shop}/admin/api/2026-04/graphql.json`, {
-    method: 'POST',
-    headers: { 'X-Shopify-Access-Token': store.access_token, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query, variables: { id: gid } }),
-  })
-  const verifyJson = await verifyRes.json()
-  const subscription = verifyJson?.data?.node
-
-  const validStatuses = ['ACCEPTED', 'ACTIVE', 'PENDING']
-  if (!subscription || !validStatuses.includes(subscription.status)) {
-    console.error('Billing callback: invalid status', subscription?.status, 'chargeId:', chargeId, 'response:', JSON.stringify(verifyJson))
-    return NextResponse.redirect(`${APP_URL}/dashboard/billing?error=charge_declined`)
-  }
-
-  if (subscription.status !== 'ACTIVE') {
-    const activateMutation = `
-      mutation appSubscriptionActivate($id: ID!) {
-        appSubscriptionActivate(id: $id) {
-          appSubscription { id status }
-          userErrors { field message }
-        }
-      }
-    `
-    await fetch(`https://${shop}/admin/api/2026-04/graphql.json`, {
-      method: 'POST',
-      headers: { 'X-Shopify-Access-Token': store.access_token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: activateMutation, variables: { id: gid } }),
-    })
-  }
-
-  const planLimits = PLAN_LIMITS[planId] || { emails_limit: 500 }
+  // With Shopify App Pricing, Shopify handles charge verification.
+  // We just update the user's plan in our database.
+  const planLimits = PLAN_LIMITS[planId]
   await supabase
     .from('profiles')
     .update({
       plan: planId,
       emails_limit: planLimits.emails_limit,
-      shopify_charge_id: chargeId,
     })
     .eq('id', user.id)
 
