@@ -95,6 +95,12 @@ export async function GET(req: NextRequest) {
       ? JSON.stringify(result.userErrors)
       : JSON.stringify(gqlJson?.errors || gqlJson)
     console.error('Shopify billing create failed:', errors)
+    // If the token is invalid/expired, redirect to reinstall flow
+    const isTokenError = JSON.stringify(gqlJson?.errors || '').toLowerCase().includes('invalid api key') ||
+      JSON.stringify(gqlJson?.errors || '').toLowerCase().includes('access token')
+    if (isTokenError) {
+      return NextResponse.redirect(`${APP_URL}/api/shopify/install?shop=${store.shop_domain}`)
+    }
     return NextResponse.redirect(`${APP_URL}/dashboard/billing?error=${encodeURIComponent(errors)}`)
   }
 
