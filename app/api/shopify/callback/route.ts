@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${APP_URL}/dashboard?error=state_mismatch`)
   }
 
-  // Exchange code for expiring access token (expiring: 1 requests shpat_ format)
+  // Exchange code for access token
   const tokenRes = await fetch(`https://${shop}/admin/oauth/access_token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -28,7 +28,6 @@ export async function GET(req: NextRequest) {
       client_id: process.env.SHOPIFY_API_KEY,
       client_secret: process.env.SHOPIFY_API_SECRET,
       code,
-      expiring: 1,
     }),
   })
 
@@ -55,6 +54,7 @@ export async function GET(req: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
+  // Check if this store already exists → just update the token
   const { data: existingStore } = await supabase
     .from('stores')
     .select('id, user_id')
@@ -62,6 +62,7 @@ export async function GET(req: NextRequest) {
     .single()
 
   if (existingStore) {
+    // Reinstall: update token on existing store record
     const { error: updateErr } = await supabase
       .from('stores')
       .update({
@@ -71,8 +72,11 @@ export async function GET(req: NextRequest) {
         ...(token_expires_at && { token_expires_at }),
       })
       .eq('shop_domain', shop)
-    if (updateErr) console.error('Store token update failed:', updateErr.message)
+    if (updateErr) {
+      console.error('Store token update failed:', updateErr.message)
+    }
   } else {
+    // New install: need user session to create the association
     const supabaseAuth = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -97,11 +101,19 @@ export async function GET(req: NextRequest) {
     })
   }
 
+  // Register orders/paid webhook (safe to re-register; Shopify ignores duplicates)
   await fetch(`https://${shop}/admin/api/2026-04/webhooks.json`, {
     method: 'POST',
-    headers: { 'X-Shopify-Access-Token': access_token, 'Content-Type': 'application/json' },
+    headers: {
+      'X-Shopify-Access-Token': access_token,
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify({
-      webhook: { topic: 'orders/paid', address: `${APP_URL}/api/webhooks/orders`, format: 'json' },
+      webhook: {
+        topic: 'orders/paid',
+        address: `${APP_URL}/api/webhooks/orders`,
+        format: 'json',
+      },
     }),
   })
 
