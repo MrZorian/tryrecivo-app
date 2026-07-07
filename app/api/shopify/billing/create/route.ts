@@ -41,7 +41,10 @@ export async function GET(req: NextRequest) {
     .from('stores')
     .select('shop_domain, access_token')
     .eq('user_id', user.id)
-    .single()
+    .eq('is_active', true)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
   if (!store) {
     return NextResponse.redirect(`${APP_URL}/dashboard?error=no_store`)
