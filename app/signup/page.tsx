@@ -2,7 +2,7 @@
 export const dynamic = 'force-dynamic'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
 export default function SignupPage() {
@@ -13,43 +13,154 @@ export default function SignupPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const fromShopify = searchParams.get('from') === 'shopify'
   const supabase = createClient()
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
-        const { data, error: signupError } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name }, emailRedirectTo: (process.env.NEXT_PUBLIC_APP_URL || 'https://app.tryrecivo.com') + '/dashboard' } })
-    if (signupError) { setError(signupError.message); setLoading(false); return }
-    try { await fetch('/api/auth/welcome', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, name }) }) } catch (_) {}
-    if (!data.session) { router.push('/verify-email?email=' + encodeURIComponent(email)) } else { router.push('/dashboard') }
+
+    const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.tryrecivo.com'
+    const { data, error: signupError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: name },
+        // After email verification, send Shopify installs to the complete-install page
+        emailRedirectTo: fromShopify
+          ? `${APP_URL}/shopify/complete`
+          : `${APP_URL}/dashboard`,
+      }
+    })
+
+    if (signupError) {
+      setError(signupError.message)
+      setLoading(false)
+      return
+    }
+
+    // Send custom welcome email
+    try {
+      await fetch('/api/auth/welcome', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, name }),
+      })
+    } catch (_) {
+      // Non-blocking — don't fail signup if welcome email fails
+    }
+
+    // Check if email confirmation is required
+    const needsConfirmation = !data.session
+    if (needsConfirmation) {
+      const verifyUrl = fromShopify
+        ? `/verify-email?email=${encodeURIComponent(email)}&from=shopify`
+        : `/verify-email?email=${encodeURIComponent(email)}`
+      router.push(verifyUrl)
+    } else {
+      // Session exists — if coming from Shopify install, complete it now
+      router.push(fromShopify ? '/shopify/complete' : '/dashboard')
+    }
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md">
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center justify-center hover:opacity-80 transition-opacity mb-2"><img src="/logo.png" alt="tryrecivo" width={120} /></Link>
-          <h1 className="text-2xl font-bold mt-2" style={{color:'#1a2f5e'}}>Create your account</h1>
-          <p className="text-gray-500 text-sm mt-1">Start sending branded receipts in 2 minutes</p>
+          <Link href="/" className="inline-flex items-center justify-center hover:opacity-80 transition-opacity mb-2">
+            <img src="/logo.png" alt="tryrecivo" width={120} />
+          </Link>
+          <h1 className="text-2xl font-bold mt-2" style={{color:'#1a2f5e'}}>
+            {fromShopify ? 'Almost there!' : 'Create your account'}
+          </h1>
+          <p className="text-gray-500 text-sm mt-1">
+            {fromShopify
+              ? 'Create your Recivo account to finish connecting your Shopify store'
+              : 'Start sending branded receipts in 2 minutes'}
+          </p>
         </div>
+
         <form onSubmit={handleSignup} className="space-y-4">
-          <div><label className="block text-sm font-medium text-gray-700 mb-1">Full name</label><input type="text" value={name} onChange={e => setName(e.target.value)} required className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none text-gray-900" placeholder="Your name" /></div>
-          <div><label className="block text-sm font-medium text-gray-700 mb-1">Email</label><input type="email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none text-gray-900" placeholder="you@store.com" /></div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Full name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              required
+              className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 text-gray-900"
+              placeholder="Your name"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required
+              className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 text-gray-900"
+              placeholder="you@store.com"
+            />
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
             <div className="relative">
-              <input type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} required minLength={8} className="w-full px-4 py-3 pr-12 rounded-lg border border-gray-200 focus:outline-none text-gray-900" placeholder="Min 8 characters" />
-              <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1" tabIndex={-1}>
-                {showPassword ? (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>) : (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>)}
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+                minLength={8}
+                className="w-full px-4 py-3 pr-12 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 text-gray-900"
+                placeholder="Min 8 characters"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(v => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors p-1"
+                tabIndex={-1}
+              >
+                {showPassword ? (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/>
+                    <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/>
+                    <line x1="1" y1="1" x2="23" y2="23"/>
+                  </svg>
+                ) : (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                )}
               </button>
             </div>
           </div>
+
           {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button type="submit" disabled={loading} className="w-full py-3 rounded-lg text-white font-semibold" style={{background: loading ? '#94a3b8' : '#00bfa5'}}>{loading ? 'Creating account...' : 'Create free account'}</button>
-          <p className="text-xs text-gray-400 text-center">Free plan includes 500 emails/month. No credit card needed.</p>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 rounded-lg text-white font-semibold transition-all"
+            style={{background: loading ? '#94a3b8' : '#00bfa5'}}
+          >
+            {loading ? 'Creating account...' : 'Create free account'}
+          </button>
+
+          <p className="text-xs text-gray-400 text-center">
+            Free plan includes 500 emails/month. No credit card needed.
+          </p>
         </form>
-        <p className="text-center text-sm text-gray-500 mt-6">Already have an account? <Link href="/login" className="font-semibold" style={{color:'#1a2f5e'}}>Sign in</Link></p>
+
+        <p className="text-center text-sm text-gray-500 mt-6">
+          Already have an account?{' '}
+          <Link href={fromShopify ? '/login?from=shopify' : '/login'} className="font-semibold" style={{color:'#1a2f5e'}}>
+            Sign in
+          </Link>
+        </p>
       </div>
     </div>
   )
