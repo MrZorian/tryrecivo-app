@@ -90,7 +90,25 @@ export async function GET(req: NextRequest) {
       }
     )
     const { data: { user } } = await supabaseAuth.auth.getUser()
-    if (!user) return NextResponse.redirect(`${APP_URL}/login`)
+    if (!user) {
+      // Save pending install data in a cookie so the user can sign up / log in
+      // and complete the store connection automatically.
+      const pendingData = JSON.stringify({
+        shop,
+        shop_name: shopData?.name || shop,
+        access_token,
+        refresh_token: refresh_token || null,
+        token_expires_at: token_expires_at || null,
+      })
+      const res = NextResponse.redirect(`${APP_URL}/signup?from=shopify`)
+      res.cookies.set('shopify_pending_install', pendingData, {
+        httpOnly: true,
+        maxAge: 3600, // 1 hour (accommodates email verification flow)
+        path: '/',
+        sameSite: 'lax',
+      })
+      return res
+    }
 
     await supabase.from('stores').insert({
       user_id: user.id,
