@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Get shop info
-  const shopRes = await fetch(`https://${shop}/admin/api/2026-04/shop.json`, {
+  const shopRes = await fetch(`https://${shop}/admin/api/2024-10/shop.json`, {
     headers: { 'X-Shopify-Access-Token': access_token },
   })
   const { shop: shopData } = await shopRes.json()
@@ -91,8 +91,8 @@ export async function GET(req: NextRequest) {
     )
     const { data: { user } } = await supabaseAuth.auth.getUser()
     if (!user) {
-      // Save pending install data in a cookie so the user can sign up / log in
-      // and complete the store connection automatically.
+      // Save pending install data in a short-lived cookie so the user can
+      // sign up / log in and complete the store connection automatically.
       const pendingData = JSON.stringify({
         shop,
         shop_name: shopData?.name || shop,
@@ -121,7 +121,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Register orders/paid webhook (safe to re-register; Shopify ignores duplicates)
-  await fetch(`https://${shop}/admin/api/2026-04/webhooks.json`, {
+  const whRes = await fetch(`https://${shop}/admin/api/2024-10/webhooks.json`, {
     method: 'POST',
     headers: {
       'X-Shopify-Access-Token': access_token,
@@ -135,6 +135,8 @@ export async function GET(req: NextRequest) {
       },
     }),
   })
+  const whJson = await whRes.json()
+  console.log('[callback] webhook reg status=' + whRes.status, JSON.stringify(whJson))
 
   return NextResponse.redirect(`${APP_URL}/dashboard?connected=true`)
 }
