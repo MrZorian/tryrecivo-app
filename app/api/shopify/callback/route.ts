@@ -120,19 +120,26 @@ export async function GET(req: NextRequest) {
     })
   }
 
-  // Register orders/paid webhook (safe to re-register; Shopify ignores duplicates)
-  const whRes = await fetch(`https://${shop}/admin/api/2024-10/webhooks.json`, {
+  // Register orders/paid webhook via GraphQL (works with read_orders scope)
+  const whRes = await fetch(`https://${shop}/admin/api/2024-10/graphql.json`, {
     method: 'POST',
     headers: {
       'X-Shopify-Access-Token': access_token,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      webhook: {
-        topic: 'orders/paid',
-        address: `${APP_URL}/api/webhooks/orders`,
-        format: 'json',
-      },
+      query: `mutation {
+        webhookSubscriptionCreate(
+          topic: ORDERS_PAID,
+          webhookSubscription: {
+            callbackUrl: "${APP_URL}/api/webhooks/orders",
+            format: JSON
+          }
+        ) {
+          webhookSubscription { id topic callbackUrl }
+          userErrors { field message }
+        }
+      }`
     }),
   })
   const whJson = await whRes.json()
