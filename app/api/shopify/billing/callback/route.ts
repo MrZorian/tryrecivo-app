@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 
 const PLAN_LIMITS: Record<string, { emails_limit: number }> = {
@@ -26,32 +25,19 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${APP_URL}/dashboard/billing?error=unknown_plan`)
   }
 
-  // Auth check
-  const supabaseAuth = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) { return req.cookies.get(name)?.value },
-        set() {},
-        remove() {},
-      },
-    }
-  )
-  const { data: { user } } = await supabaseAuth.auth.getUser()
-  if (!user) return NextResponse.redirect(`${APP_URL}/login`)
-
+  // Use service role — no session cookies needed.
+  // Shopify's cross-domain redirect from admin.shopify.com → app.tryrecivo.com
+  // drops the Supabase session cookie, so we look up the user via shop domain instead.
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  // Verify the store belongs to this user
   const { data: store } = await supabase
     .from('stores')
-    .select('id')
+    .select('user_id')
     .eq('shop_domain', shop)
-    .eq('user_id', user.id)
+    .eq('is_active', true)
     .maybeSingle()
 
   if (!store) {
@@ -67,7 +53,7 @@ export async function GET(req: NextRequest) {
       plan: planId,
       emails_limit: planLimits.emails_limit,
     })
-    .eq('id', user.id)
+    .eq('id', store.user_id)
 
   return NextResponse.redirect(`${APP_URL}/dashboard/billing?upgraded=true`)
-}
+    }
