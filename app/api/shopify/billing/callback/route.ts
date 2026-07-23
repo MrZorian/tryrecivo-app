@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
 
   // Shopify App Pricing sends: plan_handle, shop
-  // Legacy Billing API sent: plan, shop, charge_id
+  // We also embed plan + shop in the return_url from create/route.ts as fallback.
   const planHandle = searchParams.get('plan_handle') || searchParams.get('plan')
   const shop = searchParams.get('shop')
 
@@ -26,18 +26,20 @@ export async function GET(req: NextRequest) {
   }
 
   // Use service role — no session cookies needed.
-  // Shopify's cross-domain redirect from admin.shopify.com → app.tryrecivo.com
-  // drops the Supabase session cookie, so we look up the user via shop domain instead.
+  // We look up the store by shop domain to get the user_id.
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
+  // Look up the store by shop domain — no is_active filter since stores may
+  // not have that flag set, and we still need to honour the plan update.
   const { data: store } = await supabase
     .from('stores')
     .select('user_id')
     .eq('shop_domain', shop)
-    .eq('is_active', true)
+    .order('created_at', { ascending: false })
+    .limit(1)
     .maybeSingle()
 
   if (!store) {
@@ -56,4 +58,4 @@ export async function GET(req: NextRequest) {
     .eq('id', store.user_id)
 
   return NextResponse.redirect(`${APP_URL}/dashboard/billing?upgraded=true`)
-    }
+}
