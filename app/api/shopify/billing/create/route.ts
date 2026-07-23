@@ -46,11 +46,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${APP_URL}/dashboard?error=no_store`)
   }
 
-  // Redirect to Shopify App Pricing plan selection page
-  // Shopify App Pricing replaced the Billing API as the default for new App Store submissions.
-  // Plan handles match our plan IDs: starter, growth, pro.
+  // Redirect to Shopify App Pricing plan selection page.
+  // Include return_url so Shopify redirects back to our callback after approval
+  // (without it, Shopify redirects to application_url = "/" which goes to /login).
   const storeHandle = store.shop_domain.replace('.myshopify.com', '')
-  const planSelectionUrl = `https://admin.shopify.com/store/${storeHandle}/charges/recivo/plans/${planId}?interval=EVERY_30_DAYS`
+  const returnUrl = `${APP_URL}/api/shopify/billing/callback?shop=${encodeURIComponent(store.shop_domain)}&plan=${planId}`
+  const planSelectionUrl = `https://admin.shopify.com/store/${storeHandle}/charges/recivo/plans/${planId}?interval=EVERY_30_DAYS&return_url=${encodeURIComponent(returnUrl)}`
 
   return NextResponse.redirect(planSelectionUrl)
 }
