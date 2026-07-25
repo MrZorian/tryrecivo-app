@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
+import { getValidAccessToken } from '@/lib/shopifyToken'
 
 const PLAN_LIMITS: Record<string, number> = {
   free: 500,
@@ -53,7 +54,7 @@ export async function GET(req: NextRequest) {
   )
   const { data: store } = await supabase
     .from('stores')
-    .select('shop_domain, access_token')
+    .select('shop_domain, access_token, refresh_token, token_expires_at')
     .eq('user_id', user.id)
     .order('updated_at', { ascending: false })
     .limit(1)
@@ -74,6 +75,7 @@ export async function GET(req: NextRequest) {
   }
 
   // 3. Ask Shopify which subscription is active for this shop.
+  const accessToken = (await getValidAccessToken(store, supabase)) || store.access_token
   let plan = 'free'
   try {
     const gqlRes = await fetch(
@@ -81,7 +83,7 @@ export async function GET(req: NextRequest) {
       {
         method: 'POST',
         headers: {
-          'X-Shopify-Access-Token': store.access_token,
+          'X-Shopify-Access-Token': accessToken,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
